@@ -101,7 +101,7 @@ export const Contact: React.FC = () => {
     <AnimatePresence mode="wait">
       <motion.section
         id="contact"
-        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
+        className="container px-12 sm:px-14 md:px-16 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"

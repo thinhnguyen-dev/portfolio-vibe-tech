@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Button, TypingText } from '@/components/common';
 import { HeroLogo, DotsPattern, StatusBar, Quote } from '@/components/features/home';
@@ -42,8 +42,8 @@ export default function Home() {
   const heroLogoInView = useInView(heroLogoRef, { once: true, amount: 0.1 });
   const dotsPatternInView = useInView(dotsPatternRef, { once: true, amount: 0.1 });
 
-  const handleHeadingComplete = () => {
-    // Show subheading when first sentence completes
+  const handleTypingComplete = () => {
+    // Show subheading when first sentence completes typing (before backspacing starts)
     if (currentSentenceIndex === 0 && !firstCycleComplete) {
       setFirstCycleComplete(true);
       setShowSubheading(true);
@@ -52,34 +52,30 @@ export default function Home() {
         setShowButton(true);
       }, 500);
     }
-    
-    // Wait a bit before hiding the sentence
-    setTimeout(() => {
-      setShowCurrentSentence(false);
-    }, 1500); // Show completed text for 1.5 seconds
   };
 
-  // Move to next sentence after fade out
-  useEffect(() => {
-    if (!showCurrentSentence) {
-      const timeoutId = setTimeout(() => {
-        const nextIndex = (currentSentenceIndex + 1) % headingSentences.length;
-        setCurrentSentenceIndex(nextIndex);
+  const handleHeadingComplete = () => {
+    // Move to next sentence after backspace completes
+    // Small delay to ensure smooth transition
+    setTimeout(() => {
+      const nextIndex = (currentSentenceIndex + 1) % headingSentences.length;
+      setCurrentSentenceIndex(nextIndex);
+      // Reset showCurrentSentence to trigger re-mount with new sentence
+      setShowCurrentSentence(false);
+      setTimeout(() => {
         setShowCurrentSentence(true);
-      }, 300); // Wait for fade out animation to complete
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [showCurrentSentence, currentSentenceIndex]);
+      }, 50);
+    }, 100);
+  };
 
   return (
-    <main className="min-h-screen">
-      <section id="home" className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-start lg:items-center min-h-[calc(100vh-200px)]">
+    <main className="min-h-screen flex flex-col items-center">
+      <section id="home" className="container px-12 sm:px-14 md:px-16 py-6 md:py-8 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start lg:items-center min-h-[calc(100vh-200px)]">
           {/* Left Column - Text Content */}
-          <div className="space-y-6 lg:space-y-8 order-1 lg:order-1 max-w-[537px]">
+          <div className="space-y-6 lg:space-y-8 order-1 lg:order-1">
             {/* Main Heading */}
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-[1.1] min-h-[1.1em]">
+            <h1 className="text-2xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-[46px] font-bold text-foreground leading-[1.1] min-h-[1.1em]">
               <AnimatePresence mode="wait">
                 {showCurrentSentence && (
                   <motion.span
@@ -93,8 +89,12 @@ export default function Home() {
                       text={headingSentences[currentSentenceIndex]}
                       speed={30}
                       delay={300}
+                      onTypingComplete={handleTypingComplete}
                       onComplete={handleHeadingComplete}
                       showCursor={true}
+                      backspace={true}
+                      backspaceSpeed={20}
+                      backspaceDelay={1500}
                     />
                   </motion.span>
                 )}

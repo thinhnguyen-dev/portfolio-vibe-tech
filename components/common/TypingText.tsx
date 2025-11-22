@@ -13,9 +13,13 @@ interface TypingTextProps {
   speed?: number;
   delay?: number;
   onComplete?: () => void;
+  onTypingComplete?: () => void;
   className?: string;
   showCursor?: boolean;
   cursorChar?: string;
+  backspace?: boolean;
+  backspaceSpeed?: number;
+  backspaceDelay?: number;
 }
 
 export const TypingText: React.FC<TypingTextProps> = ({
@@ -23,18 +27,27 @@ export const TypingText: React.FC<TypingTextProps> = ({
   speed = 50,
   delay = 0,
   onComplete,
+  onTypingComplete,
   className = '',
   showCursor = true,
   cursorChar = '|',
+  backspace = false,
+  backspaceSpeed,
+  backspaceDelay = 500,
 }) => {
   const [displayedLength, setDisplayedLength] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [isBackspacing, setIsBackspacing] = useState(false);
+  
+  // Use backspaceSpeed if provided, otherwise use typing speed
+  const effectiveBackspaceSpeed = backspaceSpeed ?? speed;
 
   // Reset when text changes
   useEffect(() => {
     const rafId = requestAnimationFrame(() => {
       setDisplayedLength(0);
       setIsComplete(false);
+      setIsBackspacing(false);
     });
     
     return () => cancelAnimationFrame(rafId);
@@ -55,21 +68,53 @@ export const TypingText: React.FC<TypingTextProps> = ({
   const totalLength = parts.reduce((sum, part) => sum + part.text.length, 0);
 
   useEffect(() => {
-    // Handle completion
-    if (displayedLength >= totalLength && !isComplete && totalLength > 0) {
-      // Use requestAnimationFrame to avoid synchronous setState
+    // Handle typing completion - start backspacing if enabled
+    if (displayedLength >= totalLength && !isComplete && totalLength > 0 && !isBackspacing) {
+      // Call onTypingComplete callback when typing finishes (before backspacing)
+      if (onTypingComplete) {
+        setTimeout(() => onTypingComplete(), 0);
+      }
+      
+      if (backspace) {
+        // Wait for backspaceDelay before starting backspace
+        const backspaceTimeout = setTimeout(() => {
+          setIsBackspacing(true);
+        }, backspaceDelay);
+        return () => clearTimeout(backspaceTimeout);
+      } else {
+        // Normal completion without backspace
+        const rafId = requestAnimationFrame(() => {
+          setIsComplete(true);
+          if (onComplete) {
+            setTimeout(() => onComplete(), 0);
+          }
+        });
+        return () => cancelAnimationFrame(rafId);
+      }
+    }
+
+    // Handle backspace completion
+    if (backspace && isBackspacing && displayedLength === 0 && !isComplete && totalLength > 0) {
       const rafId = requestAnimationFrame(() => {
         setIsComplete(true);
+        setIsBackspacing(false);
         if (onComplete) {
-          // Call onComplete in next tick to avoid synchronous state updates
           setTimeout(() => onComplete(), 0);
         }
       });
       return () => cancelAnimationFrame(rafId);
     }
 
+    // Backspacing: decrease displayed length
+    if (backspace && isBackspacing && displayedLength > 0) {
+      const timeoutId = setTimeout(() => {
+        setDisplayedLength((prev) => prev - 1);
+      }, effectiveBackspaceSpeed);
+      return () => clearTimeout(timeoutId);
+    }
+
     // Start typing after delay
-    if (displayedLength === 0 && totalLength > 0) {
+    if (displayedLength === 0 && totalLength > 0 && !isBackspacing) {
       const initialTimeout = setTimeout(() => {
         setDisplayedLength(1);
       }, delay);
@@ -77,14 +122,14 @@ export const TypingText: React.FC<TypingTextProps> = ({
     }
 
     // Continue typing
-    if (displayedLength > 0 && displayedLength < totalLength) {
+    if (displayedLength > 0 && displayedLength < totalLength && !isBackspacing) {
       const timeoutId = setTimeout(() => {
         setDisplayedLength((prev) => prev + 1);
       }, speed);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [displayedLength, totalLength, speed, delay, onComplete, isComplete]);
+  }, [displayedLength, totalLength, speed, delay, onComplete, onTypingComplete, isComplete, backspace, isBackspacing, backspaceDelay, effectiveBackspaceSpeed]);
 
   // Render the text based on displayed length
   const renderText = () => {
@@ -110,7 +155,7 @@ export const TypingText: React.FC<TypingTextProps> = ({
   return (
     <span className={className}>
       {renderText()}
-      {showCursor && !isComplete && (
+      {showCursor && (!isComplete || (backspace && isBackspacing)) && (
         <motion.span
           animate={{ opacity: [1, 0] }}
           transition={{

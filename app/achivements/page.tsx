@@ -84,12 +84,12 @@ export default function Achievements() {
   ];
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen flex flex-col items-center">
       {/* Achievements Hero Section */}
       <motion.section
         ref={achievementsRef}
         id="achievements"
-        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
+        className="container px-12 sm:px-14 md:px-16 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         animate={achievementsInView ? "visible" : "hidden"}
@@ -120,7 +120,7 @@ export default function Achievements() {
       {/* Additional Achievements Section (if needed) */}
       <motion.section
         ref={certificationsRef}
-        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
+        className="container px-12 sm:px-14 md:px-16 lg:px-8 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         animate={certificationsInView ? "visible" : "hidden"}

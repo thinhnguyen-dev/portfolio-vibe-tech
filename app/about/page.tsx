@@ -39,12 +39,12 @@ export default function About() {
   const factsInView = useInView(factsRef, { once: true, amount: 0.2 });
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen flex flex-col items-center">
       {/* About Hero Section */}
       <motion.section
         ref={aboutRef}
         id="about"
-        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
+        className="container px-12 sm:px-14 md:px-16 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         animate={aboutInView ? "visible" : "hidden"}
@@ -96,7 +96,7 @@ export default function About() {
       {/* Skills Section */}
       <motion.section
         ref={skillsRef}
-        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
+        className="container px-12 sm:px-14 md:px-16 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         animate={skillsInView ? "visible" : "hidden"}
@@ -141,7 +141,7 @@ export default function About() {
       {/* Fun Facts Section */}
       <motion.section
         ref={factsRef}
-        className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 relative"
+        className="container px-12 sm:px-14 md:px-16 py-6 lg:py-8 relative"
         variants={containerVariants}
         initial="hidden"
         animate={factsInView ? "visible" : "hidden"}
