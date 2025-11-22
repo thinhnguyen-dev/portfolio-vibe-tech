@@ -125,8 +125,8 @@ export default function NotFound() {
               
               {/* Cursor Blink Animation */}
               <rect
-                x="200"
-                y="115"
+                x="206"
+                y="110"
                 width="8"
                 height="12"
                 fill="rgb(199, 120, 221)"
