@@ -190,7 +190,7 @@ export default function Home() {
               {/* Large Logo - 155x155, positioned at -12px left, 84px from top relative to image */}
               <motion.div 
                 ref={heroLogoRef}
-                className="absolute -left-12 lg:-left-16 top-20 hidden lg:block z-10"
+                className="absolute -left-10 lg:-left-16 top-20 hidden lg:block z-10"
                 initial={{ opacity: 0, x: -20 }}
                 animate={heroLogoInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
