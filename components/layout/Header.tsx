@@ -22,9 +22,9 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-sm border-b border-text-secondary/10">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 max-w-7xl">
         {/* Header content */}
-        <div className="flex items-center justify-between pt-8 pb-8">
+        <div className="flex items-center justify-between pt-6 sm:pt-8 pb-6 sm:pb-8">
           {/* Left section: Logo + Name - width=72px from Figma, gap=8px */}
           <div className="flex items-center gap-2 h-[32px]">
             <div className="text-foreground shrink-0">
@@ -36,7 +36,7 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Right section: Navigation + Button + Theme Switcher - gap=32px from Figma */}
-          <nav className="hidden md:flex items-center gap-8 h-[32px]">
+          <nav className="hidden md:flex items-center gap-4 md:gap-6 lg:gap-8 h-[32px]">
             {navItems.map((item) => {
               // Check if current pathname matches the nav item href
               // Handle root path ('/') separately to avoid matching all paths

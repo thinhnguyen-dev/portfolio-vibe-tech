@@ -1,13 +1,35 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Button, TypingText } from '@/components/common';
 import { HeroLogo, DotsPattern, StatusBar, Quote } from '@/components/features/home';
 import { Contact } from '@/components/features/contact';
 import { FaCode } from 'react-icons/fa';
 
+// Define 3 sentences for the main heading
+const headingSentences = [
+  [
+    { text: 'Yourname is a ' },
+    { text: 'pentester', isAccent: true },
+    { text: ' and ethical hacker' },
+  ],
+  [
+    { text: 'Specializing in ' },
+    { text: 'vulnerability assessment', isAccent: true },
+    { text: ' and security testing' },
+  ],
+  [
+    { text: 'Building ' },
+    { text: 'secure systems', isAccent: true },
+    { text: ' through ethical hacking' },
+  ],
+];
+
 export default function Home() {
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+  const [showCurrentSentence, setShowCurrentSentence] = useState(true);
+  const [firstCycleComplete, setFirstCycleComplete] = useState(false);
   const [showSubheading, setShowSubheading] = useState(false);
   const [showButton, setShowButton] = useState(false);
   const heroImageRef = useRef<HTMLDivElement>(null);
@@ -21,37 +43,67 @@ export default function Home() {
   const dotsPatternInView = useInView(dotsPatternRef, { once: true, amount: 0.1 });
 
   const handleHeadingComplete = () => {
-    setShowSubheading(true);
+    // Show subheading when first sentence completes
+    if (currentSentenceIndex === 0 && !firstCycleComplete) {
+      setFirstCycleComplete(true);
+      setShowSubheading(true);
+      // Show button after subheading appears
+      setTimeout(() => {
+        setShowButton(true);
+      }, 500);
+    }
+    
+    // Wait a bit before hiding the sentence
+    setTimeout(() => {
+      setShowCurrentSentence(false);
+    }, 1500); // Show completed text for 1.5 seconds
   };
 
-  const handleSubheadingComplete = () => {
-    setShowButton(true);
-  };
+  // Move to next sentence after fade out
+  useEffect(() => {
+    if (!showCurrentSentence) {
+      const timeoutId = setTimeout(() => {
+        const nextIndex = (currentSentenceIndex + 1) % headingSentences.length;
+        setCurrentSentenceIndex(nextIndex);
+        setShowCurrentSentence(true);
+      }, 300); // Wait for fade out animation to complete
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [showCurrentSentence, currentSentenceIndex]);
 
   return (
     <main className="min-h-screen">
-      <section id="home" className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start lg:items-center min-h-[calc(100vh-200px)]">
+      <section id="home" className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-start lg:items-center min-h-[calc(100vh-200px)]">
           {/* Left Column - Text Content */}
           <div className="space-y-6 lg:space-y-8 order-1 lg:order-1 max-w-[537px]">
-            {/* Main Heading - 537x84 from Figma */}
+            {/* Main Heading */}
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-[1.1] min-h-[1.1em]">
-              <TypingText
-                text={[
-                  { text: 'Yourname is a ' },
-                  { text: 'pentester', isAccent: true },
-                  { text: ' and ethical hacker' },
-                ]}
-                speed={30}
-                delay={300}
-                onComplete={handleHeadingComplete}
-                showCursor={true}
-              />
+              <AnimatePresence mode="wait">
+                {showCurrentSentence && (
+                  <motion.span
+                    key={currentSentenceIndex}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TypingText
+                      text={headingSentences[currentSentenceIndex]}
+                      speed={30}
+                      delay={300}
+                      onComplete={handleHeadingComplete}
+                      showCursor={true}
+                    />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </h1>
             
             {/* Subheading - 463x50 from Figma, gray color */}
             <p className="text-base md:text-lg text-text-secondary max-w-[463px] leading-relaxed min-h-[1.5em]">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {showSubheading && (
                   <motion.span
                     initial={{ opacity: 0 }}
@@ -59,13 +111,7 @@ export default function Home() {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <TypingText
-                      text="I identifies vulnerabilities and strengthens security defenses through ethical hacking and penetration testing"
-                      speed={40}
-                      delay={200}
-                      onComplete={handleSubheadingComplete}
-                      showCursor={true}
-                    />
+                    I identifies vulnerabilities and strengthens security defenses through ethical hacking and penetration testing
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -187,7 +233,7 @@ export default function Home() {
       </section>
       
       {/* Quote Section */}
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <section className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8">
         <div className="flex justify-center">
           <Quote 
             quote="The only truly secure system is one that is powered off, cast in a block of concrete and sealed in a lead-lined room with armed guards"

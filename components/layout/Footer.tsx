@@ -5,12 +5,12 @@ import { FaFacebook, FaGithub, FaInstagram, FaRegCopyright } from 'react-icons/f
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="container min-w-screen mt-16 py-6 lg:py-8 border-t border-text-secondary/20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+    <footer className="container min-w-screen mt-12 md:mt-16 py-6 md:py-8 border-t border-text-secondary/20">
+      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 max-w-7xl">
         {/* Main Footer Container */}
         <div className="flex flex-col gap-8 sm:gap-10 lg:gap-12">
           {/* Top Section */}
-          <div className="flex flex-col lg:flex-row items-start lg:items-center lg:justify-between gap-6 sm:gap-8 lg:gap-[437px]">
+          <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-6 sm:gap-8 md:gap-12 lg:gap-[437px]">
             {/* Left Section */}
             <div className="flex flex-col gap-4 w-full max-w-full lg:w-[346px] lg:h-[58px]">
               {/* Logo + Yourname container */}

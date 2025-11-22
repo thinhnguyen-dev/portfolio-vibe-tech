@@ -101,7 +101,7 @@ export const Contact: React.FC = () => {
     <AnimatePresence mode="wait">
       <motion.section
         id="contact"
-        className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8"
+        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
@@ -135,12 +135,12 @@ export const Contact: React.FC = () => {
 
           {/* Content - Two column layout */}
           <motion.div
-            className="flex flex-col lg:flex-row gap-8 w-full lg:justify-between"
+            className="flex flex-col md:flex-row gap-6 md:gap-8 w-full md:justify-between"
             variants={itemVariants}
           >
             {/* Left: Description */}
             <motion.div
-              className="w-full lg:w-[505px] max-w-full min-h-[63px]"
+              className="w-full md:w-[450px] lg:w-[505px] max-w-full min-h-[63px]"
               variants={itemVariants}
             >
               <p className="text-text-secondary text-base leading-relaxed">
@@ -150,7 +150,7 @@ export const Contact: React.FC = () => {
 
             {/* Right: Contact Box */}
             <motion.div
-              className="border border-text-secondary flex flex-col w-full lg:w-[300px] h-[141px] max-w-full relative"
+              className="border border-text-secondary flex flex-col w-full md:w-[280px] lg:w-[300px] h-[141px] max-w-full relative"
               variants={itemVariants}
               whileHover={{ 
                 scale: 1.03,

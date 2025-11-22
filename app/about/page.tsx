@@ -44,7 +44,7 @@ export default function About() {
       <motion.section
         ref={aboutRef}
         id="about"
-        className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8"
+        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         animate={aboutInView ? "visible" : "hidden"}
@@ -60,7 +60,7 @@ export default function About() {
 
         {/* Content Section */}
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 lg:gap-16 items-start"
           variants={itemVariants}
         >
           {/* Left: Image */}
@@ -96,7 +96,7 @@ export default function About() {
       {/* Skills Section */}
       <motion.section
         ref={skillsRef}
-        className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8"
+        className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-6 md:py-8 lg:py-8"
         variants={containerVariants}
         initial="hidden"
         animate={skillsInView ? "visible" : "hidden"}

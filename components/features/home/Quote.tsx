@@ -12,7 +12,7 @@ interface QuoteProps {
 export const Quote: React.FC<QuoteProps> = ({ quote, author, className = '' }) => {
   return (
     <motion.div 
-      className={`relative bg-background border border-text-secondary w-full max-w-[712px] mx-auto px-4 sm:px-8 min-h-[95px] ${className}`}
+      className={`relative bg-background border border-text-secondary w-full max-w-[712px] mx-auto px-4 sm:px-6 md:px-8 min-h-[95px] ${className}`}
       whileHover={{ 
         scale: 1.03,
         y: -5,
@@ -67,9 +67,9 @@ export const Quote: React.FC<QuoteProps> = ({ quote, author, className = '' }) =
 
       {/* Quote text - responsive with proper padding and wrapping */}
       <div 
-        className="relative text-foreground pt-4 sm:pt-8 pr-8 sm:pr-24 pb-4 sm:pb-6"
+        className="relative text-foreground pt-4 sm:pt-6 md:pt-8 pr-4 sm:pr-12 md:pr-24 pb-4 sm:pb-5 md:pb-6"
       >
-        <p className="text-lg sm:text-2xl leading-relaxed sm:leading-[31px] font-medium">
+        <p className="text-lg sm:text-xl md:text-2xl leading-relaxed sm:leading-[28px] md:leading-[31px] font-medium">
           {quote}
         </p>
       </div>
