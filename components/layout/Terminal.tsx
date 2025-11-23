@@ -3,12 +3,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
+import { RiArrowRightWideLine } from 'react-icons/ri';
+import { FaApple } from 'react-icons/fa';
 
 type Theme = 'light' | 'dark';
 
 interface CommandOutput {
   type: 'command' | 'output' | 'error';
   content: string | string[];
+  isRoot?: boolean; // Track if command was executed as root
 }
 
 interface TerminalProps {
@@ -126,6 +129,12 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const [tabSuggestions, setTabSuggestions] = useState<string[]>([]);
   const [tabSuggestionIndex, setTabSuggestionIndex] = useState(-1);
   const [lastTabPress, setLastTabPress] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<string>('');
+  const [inlineAutocomplete, setInlineAutocomplete] = useState<{ matched: string; unmatched: string } | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [isRoot, setIsRoot] = useState(false);
+  const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -466,6 +475,51 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     };
   }, []);
 
+  // Restore terminal state after reboot or navigation
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    
+    try {
+      const savedState = sessionStorage.getItem('terminalState');
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        
+        // Restore command history
+        if (state.commandHistory && Array.isArray(state.commandHistory) && state.commandHistory.length > 0) {
+          // Use setTimeout to avoid synchronous setState in effect
+          setTimeout(() => {
+            setCommandHistory(prev => {
+              // Merge saved history with welcome message if it exists
+              const welcomeMsg = prev.find(item => item.type === 'output' && typeof item.content === 'string' && item.content.includes('Welcome'));
+              if (welcomeMsg) {
+                return [welcomeMsg, ...state.commandHistory as CommandOutput[]];
+              }
+              return state.commandHistory as CommandOutput[];
+            });
+          }, 0);
+        }
+        
+        // Restore command history list for arrow key navigation
+        if (state.commandHistoryList && Array.isArray(state.commandHistoryList) && state.commandHistoryList.length > 0) {
+          setTimeout(() => {
+            setCommandHistoryList(state.commandHistoryList);
+          }, 0);
+        }
+        
+        // Clear saved state after restoring (but keep shouldReopen flag for TerminalWrapper)
+        const { shouldReopen, ...restState } = state;
+        if (shouldReopen) {
+          // Keep the flag for TerminalWrapper to handle
+          sessionStorage.setItem('terminalState', JSON.stringify({ ...restState, shouldReopen }));
+        } else {
+          sessionStorage.removeItem('terminalState');
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }, [isOpen]);
+
   // Focus input when terminal opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -473,12 +527,45 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
+  // Auto-focus input after command execution completes
+  useEffect(() => {
+    // When isExecuting becomes false, it means a command just finished
+    if (!isExecuting && isOpen && inputRef.current) {
+      // Use a small delay to ensure DOM updates are complete
+      const timeoutId = setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isExecuting, isOpen]);
+
   // Auto-scroll to bottom when new output is added
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
   }, [commandHistory]);
+
+  // Live clock - update every second
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      setCurrentTime(`${hours}:${minutes}:${seconds}`);
+    };
+
+    // Set initial time
+    updateTime();
+
+    // Update every second
+    const interval = setInterval(updateTime, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Available routes
   const routes = ['/', '/about', '/achievements'];
@@ -623,14 +710,14 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   };
 
   // Execute commands
-  const executeCommand = (command: string) => {
+  const executeCommand = async (command: string): Promise<void> => {
     const trimmedCommand = command.trim();
     if (!trimmedCommand) {
       return;
     }
 
     const [cmd, ...args] = trimmedCommand.split(' ');
-    const output: CommandOutput[] = [{ type: 'command', content: trimmedCommand }];
+    const output: CommandOutput[] = [{ type: 'command', content: trimmedCommand, isRoot }];
 
     switch (cmd.toLowerCase()) {
       case 'help':
@@ -646,6 +733,15 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
             '  uname      - Display browser information',
             '  echo <text> - Print the provided text',
             '  clear      - Clear the terminal output',
+            '  whoami     - Display your IP address',
+            '  reboot     - Reload the current page',
+            '  github     - Open GitHub page',
+            '  blog       - Open blog page',
+            '  theme      - Toggle between light and dark theme',
+            '  sudo su    - Switch to root user (requires password)',
+            '  su         - Switch to root user (requires password)',
+            '  logout     - Switch back to normal user (if root)',
+            '  exit       - Close the terminal',
           ]
         });
         break;
@@ -749,6 +845,254 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
         setCommandHistory([]);
         return; // Don't add command to history for clear
 
+      case 'whoami':
+        // Add "Checking..." message immediately
+        output.push({ type: 'output' as const, content: 'Checking...' });
+        setCommandHistory(prev => {
+          const newHistory: CommandOutput[] = [...prev, ...output];
+          return limitHistory(newHistory);
+        });
+        setCommandHistoryList(prev => [...prev, trimmedCommand]);
+        setHistoryIndex(-1);
+        
+        // Fetch user's IP address with 10s timeout using async/await
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        try {
+          const response = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          
+          const data = await response.json();
+          // Replace "Checking..." with the actual result
+          setCommandHistory(prev => {
+            const newHistory = [...prev];
+            // Find and replace the last "Checking..." message
+            const lastIndex = newHistory.length - 1;
+            if (lastIndex >= 0 && newHistory[lastIndex].type === 'output' && newHistory[lastIndex].content === 'Checking...') {
+              newHistory[lastIndex] = { type: 'output' as const, content: `You are ${data.ip}` };
+            } else {
+              // Fallback: add the result if we couldn't find "Checking..."
+              newHistory.push({ type: 'output' as const, content: `You are ${data.ip}` });
+            }
+            return limitHistory(newHistory);
+          });
+        } catch (error: unknown) {
+          clearTimeout(timeoutId);
+          const errorMessage = (error as Error).name === 'AbortError' 
+            ? 'whoami: Request timeout (10s exceeded)'
+            : 'whoami: Unable to fetch IP address';
+          // Replace "Checking..." with the error message
+          setCommandHistory(prev => {
+            const newHistory = [...prev];
+            // Find and replace the last "Checking..." message
+            const lastIndex = newHistory.length - 1;
+            if (lastIndex >= 0 && newHistory[lastIndex].type === 'output' && newHistory[lastIndex].content === 'Checking...') {
+              newHistory[lastIndex] = { type: 'error' as const, content: errorMessage };
+            } else {
+              // Fallback: add the error if we couldn't find "Checking..."
+              newHistory.push({ type: 'error' as const, content: errorMessage });
+            }
+            return limitHistory(newHistory);
+          });
+        }
+        return; // Exit early since we've handled everything
+
+      case 'reboot':
+        // Save terminal state to sessionStorage before reload
+        try {
+          sessionStorage.setItem('terminalState', JSON.stringify({
+            isOpen: true,
+            commandHistory: commandHistory.slice(-10), // Save last 10 entries
+            shouldReopen: true, // Flag to automatically reopen terminal
+          }));
+        } catch {
+          // Ignore storage errors
+        }
+        output.push({
+          type: 'output' as const,
+          content: 'Rebooting...'
+        });
+        setCommandHistory(prev => {
+          const newHistory: CommandOutput[] = [...prev, ...output];
+          return limitHistory(newHistory);
+        });
+        setCommandHistoryList(prev => [...prev, trimmedCommand]);
+        setHistoryIndex(-1);
+        // Reload page after a short delay to show the message
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        return; // Exit early since we're reloading
+
+      case 'github':
+        output.push({
+          type: 'output' as const,
+          content: 'Opening GitHub...'
+        });
+        setCommandHistory(prev => {
+          const newHistory: CommandOutput[] = [...prev, ...output];
+          return limitHistory(newHistory);
+        });
+        setCommandHistoryList(prev => [...prev, trimmedCommand]);
+        setHistoryIndex(-1);
+        // Open GitHub in new tab
+        window.open('https://github.com', '_blank');
+        break;
+
+      case 'blog':
+        // Calculate the new state before updating
+        output.push({
+          type: 'output' as const,
+          content: 'Navigating to blog...'
+        });
+        const newHistory = [...commandHistory];
+        const limitedHistory = limitHistory(newHistory);
+        const newCommandHistoryList = [...commandHistoryList, trimmedCommand];
+        
+        // Save terminal state to sessionStorage before navigation
+        try {
+          sessionStorage.setItem('terminalState', JSON.stringify({
+            isOpen: true,
+            commandHistory: limitedHistory,
+            commandHistoryList: newCommandHistoryList,
+            shouldReopen: true, // Flag to automatically reopen terminal
+          }));
+        } catch {
+          // Ignore storage errors
+        }
+        
+        // Update state
+        setCommandHistory(limitedHistory);
+        setCommandHistoryList(newCommandHistoryList);
+        setHistoryIndex(-1);
+        
+        // Navigate to /blog route within the app
+        // Use a small delay to ensure state is saved and UI is updated
+        setTimeout(() => {
+          router.push('/blog');
+        }, 150);
+        break;
+
+      case 'theme':
+        const currentTheme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        // Apply theme change
+        document.documentElement.classList.remove(currentTheme);
+        document.documentElement.classList.add(newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        output.push({
+          type: 'output',
+          content: `Theme switched to ${newTheme} mode`
+        });
+        break;
+
+      case 'sudo':
+        if (args.length > 0 && args[0].toLowerCase() === 'su') {
+          // Handle sudo su
+          if (isRoot) {
+            output.push({
+              type: 'output' as const,
+              content: 'Already running as root.'
+            });
+          } else {
+            // Add command to history first
+            setCommandHistory(prev => {
+              const newHistory: CommandOutput[] = [...prev, ...output];
+              return limitHistory(newHistory);
+            });
+            setCommandHistoryList(prev => [...prev, trimmedCommand]);
+            setHistoryIndex(-1);
+            
+            // Trigger password prompt
+            setIsPasswordPrompt(true);
+            setPasswordInput('');
+            setCommandHistory(prev => {
+              const newHistory: CommandOutput[] = [
+                ...prev,
+                { type: 'output' as const, content: 'Password:' }
+              ];
+              return limitHistory(newHistory);
+            });
+            return;
+          }
+        } else {
+          output.push({
+            type: 'error' as const,
+            content: 'sudo: usage: sudo su'
+          });
+        }
+        break;
+
+      case 'su':
+        if (isRoot) {
+          output.push({
+            type: 'output' as const,
+            content: 'Already running as root.'
+          });
+        } else {
+          // Add command to history first
+          setCommandHistory(prev => {
+            const newHistory: CommandOutput[] = [...prev, ...output];
+            return limitHistory(newHistory);
+          });
+          setCommandHistoryList(prev => [...prev, trimmedCommand]);
+          setHistoryIndex(-1);
+          
+          // Trigger password prompt
+          setIsPasswordPrompt(true);
+          setPasswordInput('');
+          setCommandHistory(prev => {
+            const newHistory: CommandOutput[] = [
+              ...prev,
+              { type: 'output' as const, content: 'Password:' }
+            ];
+            return limitHistory(newHistory);
+          });
+          return;
+        }
+        break;
+
+      case 'logout':
+        if (isRoot) {
+          // Switch back to normal user
+          setIsRoot(false);
+          output.push({
+            type: 'output' as const,
+            content: 'Logged out. Switched back to normal user.'
+          });
+        } else {
+          output.push({
+            type: 'output' as const,
+            content: 'You are not logged in as root.'
+          });
+        }
+        break;
+
+      case 'exit':
+        // Close the terminal
+        output.push({
+          type: 'output' as const,
+          content: 'Closing terminal...'
+        });
+        setCommandHistory(prev => {
+          const newHistory: CommandOutput[] = [...prev, ...output];
+          return limitHistory(newHistory);
+        });
+        setCommandHistoryList(prev => [...prev, trimmedCommand]);
+        setHistoryIndex(-1);
+        // Close terminal after a short delay to show the message
+        setTimeout(() => {
+          onClose();
+        }, 300);
+        return; // Exit early since we're closing
+
       default:
         output.push({
           type: 'error',
@@ -764,19 +1108,87 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     setHistoryIndex(-1);
   };
 
-  // Handle input submission
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle password submission
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const PASSWORD = '1234';
+    
+    if (passwordInput === PASSWORD) {
+      // Correct password - switch to root
+      setIsRoot(true);
+      setIsPasswordPrompt(false);
+      setPasswordInput('');
+      
+      // Add success message to history
+      setCommandHistory(prev => {
+        const newHistory: CommandOutput[] = [
+          ...prev,
+          { type: 'output' as const, content: 'Authentication successful. You are now root.' }
+        ];
+        return limitHistory(newHistory);
+      });
+      
+      // Focus input after password success
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 50);
+    } else {
+      // Incorrect password - show error and close password prompt
+      setIsPasswordPrompt(false);
+      setPasswordInput('');
+      
+      // Add error message to history
+      setCommandHistory(prev => {
+        const newHistory: CommandOutput[] = [
+          ...prev,
+          { type: 'error' as const, content: 'Sorry, incorrect password!' }
+        ];
+        return limitHistory(newHistory);
+      });
+      
+      // Show normal input line and focus it so user can try again or enter another command
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 50);
+    }
+  };
+
+  // Handle input submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // If password prompt is active, handle password submission
+    if (isPasswordPrompt) {
+      handlePasswordSubmit(e);
+      return;
+    }
+    
     const trimmedInput = currentInput.trim();
+    
+    // Prevent submission if a command is already executing
+    if (isExecuting) {
+      return;
+    }
     
     // Always clear input and tab suggestions
     setCurrentInput('');
     setTabSuggestions([]);
     setTabSuggestionIndex(-1);
+    setInlineAutocomplete(null);
     
     if (trimmedInput) {
-      // Execute command if there's input
-      executeCommand(trimmedInput);
+      // Set executing state and execute command
+      setIsExecuting(true);
+      try {
+        await executeCommand(trimmedInput);
+      } finally {
+        // Always clear executing state when done
+        setIsExecuting(false);
+      }
     } else {
       // Empty input - just add a new prompt line without executing anything
       setCommandHistory(prev => {
@@ -784,22 +1196,76 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
           ...prev,
           {
             type: 'command' as const,
-            content: ''
+            content: '',
+            isRoot
           }
         ];
         return limitHistory(newHistory);
       });
+      // Focus input after empty command is processed
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 50);
     }
   };
 
-  // Handle input change - clear tab suggestions when user types
+  // Get inline autocomplete suggestion for cd command
+  const getInlineAutocomplete = (input: string): { matched: string; unmatched: string } | null => {
+    const trimmed = input.trim();
+    if (!trimmed.toLowerCase().startsWith('cd ')) {
+      return null;
+    }
+
+    const pathPart = trimmed.substring(3).trim();
+    if (!pathPart) {
+      return null;
+    }
+
+    const matches = getMatchingRoutes(pathPart);
+    
+    if (matches.length === 1) {
+      // Single match - show autocomplete
+      const match = matches[0];
+      const normalizedPath = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
+      
+      if (match.startsWith(normalizedPath) && match.length > normalizedPath.length) {
+        return {
+          matched: trimmed, // Full input including "cd "
+          unmatched: match.substring(normalizedPath.length)
+        };
+      }
+    } else if (matches.length > 1) {
+      // Multiple matches - show common prefix
+      const commonPrefix = getCommonPrefix(matches);
+      const normalizedPath = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
+      
+      if (commonPrefix.startsWith(normalizedPath) && commonPrefix.length > normalizedPath.length) {
+        return {
+          matched: trimmed, // Full input including "cd "
+          unmatched: commonPrefix.substring(normalizedPath.length)
+        };
+      }
+    }
+    
+    return null;
+  };
+
+  // Handle input change - clear tab suggestions when user types and update inline autocomplete
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentInput(e.target.value);
+    const newValue = e.target.value;
+    setCurrentInput(newValue);
+    
     // Clear tab suggestions when user modifies input
     if (tabSuggestions.length > 0) {
       setTabSuggestions([]);
       setTabSuggestionIndex(-1);
     }
+    
+    // Update inline autocomplete
+    const autocomplete = getInlineAutocomplete(newValue);
+    setInlineAutocomplete(autocomplete);
   };
 
   // Handle click on terminal content area to focus input
@@ -834,6 +1300,9 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
       e.preventDefault();
       const completed = handleTabCompletion(currentInput);
       setCurrentInput(completed);
+      // Update inline autocomplete after tab completion
+      const autocomplete = getInlineAutocomplete(completed);
+      setInlineAutocomplete(autocomplete);
       // Reset tab suggestions after a delay if user types something else
       setTimeout(() => {
         if (tabSuggestions.length > 0) {
@@ -846,31 +1315,45 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
       }, 1000);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      // Clear tab suggestions when navigating history
+      // Clear tab suggestions and inline autocomplete when navigating history
       setTabSuggestions([]);
       setTabSuggestionIndex(-1);
+      setInlineAutocomplete(null);
       if (commandHistoryList.length > 0) {
         const newIndex = historyIndex === -1 
           ? commandHistoryList.length - 1 
           : Math.max(0, historyIndex - 1);
         setHistoryIndex(newIndex);
-        setCurrentInput(commandHistoryList[newIndex]);
+        const newInput = commandHistoryList[newIndex];
+        setCurrentInput(newInput);
+        // Update inline autocomplete for the history command
+        const autocomplete = getInlineAutocomplete(newInput);
+        setInlineAutocomplete(autocomplete);
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      // Clear tab suggestions when navigating history
+      // Clear tab suggestions and inline autocomplete when navigating history
       setTabSuggestions([]);
       setTabSuggestionIndex(-1);
+      setInlineAutocomplete(null);
       if (historyIndex !== -1) {
         const newIndex = historyIndex + 1;
         if (newIndex >= commandHistoryList.length) {
           setHistoryIndex(-1);
           setCurrentInput('');
+          setInlineAutocomplete(null);
         } else {
           setHistoryIndex(newIndex);
-          setCurrentInput(commandHistoryList[newIndex]);
+          const newInput = commandHistoryList[newIndex];
+          setCurrentInput(newInput);
+          // Update inline autocomplete for the history command
+          const autocomplete = getInlineAutocomplete(newInput);
+          setInlineAutocomplete(autocomplete);
         }
       }
+    } else if (e.key === 'Enter') {
+      // Clear inline autocomplete on Enter
+      setInlineAutocomplete(null);
     }
     // Note: Tab suggestions are cleared in handleInputChange when user types
   };
@@ -925,10 +1408,10 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
               willChange: isDragging || isResizing ? 'transform' : 'auto',
             }}
           >
-            <div className={`w-full h-full ${isMobile ? 'rounded-lg' : 'rounded-t-lg'} flex flex-col overflow-hidden relative transition-colors ${
+            <div className={`w-full h-full ${isMobile ? 'rounded-lg' : 'rounded-t-lg'} flex flex-col overflow-hidden relative transition-colors backdrop-blur-md ${
               theme === 'dark' 
-                ? 'bg-[#2d2d2d] border border-[#1a1a1a] shadow-[0_20px_60px_rgba(0,0,0,0.5)]' 
-                : 'bg-[#f5f5f5] border border-[#d0d0d0] shadow-[0_20px_60px_rgba(0,0,0,0.15)]'
+                ? 'bg-[#2d2d2d]/60 border border-[#1a1a1a]/80 shadow-[0_20px_60px_rgba(0,0,0,0.5)]' 
+                : 'bg-[#f5f5f5]/60 border border-[#d0d0d0]/80 shadow-[0_20px_60px_rgba(0,0,0,0.15)]'
             }`}>
               {/* macOS Title Bar */}
               <div
@@ -945,12 +1428,12 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                     });
                   }
                 }}
-                className={`flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5 border-b select-none ${isMobile ? 'rounded-t-lg' : 'rounded-t-lg'} transition-colors ${
+                className={`flex items-center justify-between px-3 md:px-4py-2 py-2 md:py-2.5 border-t border-l border-r border-accent/40 select-none ${isMobile ? 'rounded-t-lg' : 'rounded-t-lg'} transition-colors ${
                   isMobile ? '' : 'cursor-grab active:cursor-grabbing'
                 } ${
                   theme === 'dark'
-                    ? 'bg-[#3a3a3a] border-[#1a1a1a]'
-                    : 'bg-[#e8e8e8] border-[#d0d0d0]'
+                    ? 'bg-[#3a3a3a]/2'
+                    : 'bg-[#e8e8e8]/2'
                 }`}
               >
                 {/* macOS Traffic Light Buttons */}
@@ -993,10 +1476,10 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
               <div 
                 ref={contentRef}
                 onClick={handleContentClick}
-                className={`flex-1 font-mono text-xs md:text-sm overflow-auto p-3 md:p-4 transition-colors cursor-text ${
+                className={`flex-1 font-mono text-xs md:text-sm overflow-auto p-3 md:p-4 transition-colors cursor-text border border-accent/40 ${
                   theme === 'dark'
-                    ? 'bg-[#1e1e1e] text-[#d0d0d0]'
-                    : 'bg-[#ffffff] text-[#000000]'
+                    ? 'bg-background/60 text-[#d0d0d0]'
+                    : 'bg-[#ffffff]/60 text-[#000000]'
                 }`}
               >
                 <div className="space-y-1">
@@ -1004,12 +1487,42 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                   {commandHistory.map((item, index) => (
                     <div key={index} className="mb-1">
                       {item.type === 'command' && (
-                        <div className="flex items-center gap-2">
-                          <span className={theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]'}>user@portfolio</span>
-                          <span className={theme === 'dark' ? 'text-[#666666]' : 'text-[#666666]'}>:</span>
-                          <span className={theme === 'dark' ? 'text-[#87ceeb]' : 'text-[#0066cc]'}>{getCurrentPath()}</span>
-                          <span className={theme === 'dark' ? 'text-[#666666]' : 'text-[#666666]'}>$</span>
-                          <span className={theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'}>{item.content}</span>
+                        <div className='flex items-center'>
+                          <div className='w-4 h-[26px] rounded-l-md border-l border-t border-b border-accent'></div>
+                          <div className="flex flex-col gap-0.5 w-full">
+                            {/* First line: User label */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`flex items-center gap-1 ${item.isRoot ? 'text-red-500' : (theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]')}`}>
+                                <span className={item.isRoot ? 'text-red-500' : 'text-accent'}><FaApple size={16} /></span>
+                                <span className="mt-1">{item.isRoot ? 'root@portfolio' : 'user@portfolio'}</span>
+                                <span className="mt-1 text-text-secondary">|</span>
+                                <span className="mt-1 text-base text-green-500">~</span>
+                              </span>
+                              <div 
+                                className="mt-1 flex-1"
+                                style={{
+                                  backgroundImage: `radial-gradient(circle, ${theme === 'dark' ? 'rgba(171, 178, 191, 0.6)' : 'rgba(107, 114, 128, 0.6)'} 2px, transparent 2px)`,
+                                  backgroundSize: '10px 10px',
+                                  backgroundPosition: '0 50%',
+                                  backgroundRepeat: 'repeat-x',
+                                  height: '4px'
+                                }}
+                              ></div>
+                              <div className='mt-1 text-text-secondary'>|</div>
+                              {/* <div className={`mt-1 text-md font-semibold text-green-500 font-mono ${theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'}`}>
+                                {currentTime}
+                              </div>
+                              <div className='mt-1 text-text-secondary'>|</div> */}
+                              <div className='mt-1 text-green-500 font-semibold font-momo'>webshell</div>
+                            </div>
+                            {/* Second line: Command with prompt */}
+                            <div className="-ml-1 flex items-center gap-2 mb-1">
+                              <span className={item.isRoot ? 'text-red-500' : (theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]')}>
+                                <RiArrowRightWideLine size={16} />
+                              </span>
+                              <span className={theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'}>{item.content}</span>
+                            </div>
+                          </div>
                         </div>
                       )}
                       {item.type === 'output' && (
@@ -1031,26 +1544,113 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                     </div>
                   ))}
 
-                  {/* Input Line */}
-                  <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                    <span className={theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]'}>user@portfolio</span>
-                    <span className={theme === 'dark' ? 'text-[#666666]' : 'text-[#666666]'}>:</span>
-                    <span className={theme === 'dark' ? 'text-[#87ceeb]' : 'text-[#0066cc]'}>{getCurrentPath()}</span>
-                    <span className={theme === 'dark' ? 'text-[#666666]' : 'text-[#666666]'}>$</span>
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={currentInput}
-                      onChange={handleInputChange}
-                      onKeyDown={handleKeyDown}
-                      className={`flex-1 bg-transparent border-none outline-none ${
-                        theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'
-                      }`}
-                      autoFocus
-                      autoComplete="off"
-                      spellCheck="false"
-                    />
-                  </form>
+                  {/* Input Line - Two-line layout */}
+                  {!isPasswordPrompt ? (
+                    <div className='flex items-center'>
+                      <div className='w-4 h-[26px] rounded-l-md border-l border-t border-b border-accent'></div>
+                      <form onSubmit={handleSubmit} className="flex flex-col gap-0.5 w-full">
+                        {/* First line: User label */}
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`flex items-center gap-1 ${isRoot ? 'text-red-500' : (theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]')}`}>
+                            <span className={isRoot ? 'text-red-500' : 'text-accent'}><FaApple size={16} /></span>
+                            <span className="mt-1">{isRoot ? 'root@portfolio' : 'user@portfolio'}</span>
+                            <span className="mt-1 text-text-secondary">|</span>
+                            <span className="mt-1 text-base text-green-500">~</span>
+                          </div>
+                          <div 
+                            className="mt-1 flex-1"
+                            style={{
+                              backgroundImage: `radial-gradient(circle, ${theme === 'dark' ? 'rgba(171, 178, 191, 0.6)' : 'rgba(107, 114, 128, 0.6)'} 2px, transparent 2px)`,
+                              backgroundSize: '10px 10px',
+                              backgroundPosition: '0 50%',
+                              backgroundRepeat: 'repeat-x',
+                              height: '4px'
+                            }}
+                          ></div>
+                          <div className='mt-1 text-text-secondary'>|</div>
+                          <div className={`mt-1 text-md font-semibold text-green-500 font-mono ${theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'}`}>
+                            {currentTime}
+                          </div>
+                          <div className='mt-1 text-text-secondary'>|</div>
+                          <div className='mt-1 text-green-500 font-semibold font-momo'>webshell</div>
+                        </div>
+                        {/* Second line: Input field with prompt */}
+                        <div className="-ml-1 flex items-center gap-2 mb-1">
+                          <span className={isRoot ? 'text-red-500' : (theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]')}>
+                            <RiArrowRightWideLine size={16} />
+                          </span>
+                          {isExecuting && (
+                            <span className={`text-xs ${theme === 'dark' ? 'text-[#666666]' : 'text-[#666666]'}`}>
+                              executing...
+                            </span>
+                          )}
+                          <div className="flex-1 relative flex items-center min-w-0">
+                            <div className="relative w-full flex items-center">
+                              <input
+                                ref={inputRef}
+                                type="text"
+                                value={currentInput}
+                                onChange={handleInputChange}
+                                onKeyDown={handleKeyDown}
+                                disabled={isExecuting}
+                                className={`w-full bg-transparent border-none outline-none relative z-10 ${
+                                  theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'
+                                } ${isExecuting ? 'opacity-50 cursor-wait' : ''}`}
+                                autoFocus
+                                autoComplete="off"
+                                spellCheck="false"
+                              />
+                              {/* Inline autocomplete suggestion - positioned after input text */}
+                              {inlineAutocomplete && (
+                                <span 
+                                  className="absolute left-0 pointer-events-none whitespace-pre font-mono"
+                                  style={{
+                                    fontFamily: 'inherit',
+                                    fontSize: 'inherit',
+                                    lineHeight: 'inherit',
+                                  }}
+                                >
+                                  <span className="opacity-0">{currentInput}</span>
+                                  <span className={theme === 'dark' ? 'text-[#666666]/60' : 'text-[#666666]/60'}>
+                                    {inlineAutocomplete.unmatched}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    /* Hidden password input - completely invisible but functional */
+                    <form onSubmit={handleSubmit} style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+                      <input
+                        ref={inputRef}
+                        type="password"
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setIsPasswordPrompt(false);
+                            setPasswordInput('');
+                            setCurrentInput('');
+                            // Add cancellation message
+                            setCommandHistory(prev => {
+                              const newHistory: CommandOutput[] = [
+                                ...prev,
+                                { type: 'error' as const, content: 'Password entry cancelled.' }
+                              ];
+                              return limitHistory(newHistory);
+                            });
+                          }
+                        }}
+                        autoFocus
+                        autoComplete="off"
+                        spellCheck="false"
+                        style={{ width: '1px', height: '1px', opacity: 0 }}
+                      />
+                    </form>
+                  )}
 
                   {/* Tab Completion Suggestions */}
                   {tabSuggestions.length > 1 && (
