@@ -34,7 +34,7 @@ export const SocialMediaLinks: React.FC = () => {
   const navItems = [
     { icon: IoMdHome, href: '/', label: 'home' },
     { icon: IoMdPerson, href: '/about', label: 'about' },
-    { icon: FaMedal, href: '/achivements', label: 'achivements' },
+    { icon: FaMedal, href: '/achievements', label: 'achievements' },
   ];
 
   return (

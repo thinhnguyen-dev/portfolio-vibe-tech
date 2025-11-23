@@ -6,6 +6,7 @@ import { Logo } from '../common/Logo';
 import { NavLink } from '../common/NavLink';
 import { ThemeSwitcher } from '../common/ThemeSwitcher';
 import { Button } from '../common/Button';
+import { useTerminal } from './TerminalContext';
 import { IoMdHome } from 'react-icons/io';
 import { FaCode, FaMedal } from 'react-icons/fa';
 import { IoMdPerson } from 'react-icons/io';
@@ -13,11 +14,12 @@ import { IoMdPerson } from 'react-icons/io';
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { openTerminal } = useTerminal();
 
   const navItems = [
     { icon: <IoMdHome />, href: '/', label: 'home' },
     { icon: <IoMdPerson />, href: '/about', label: 'about' },
-    { icon: <FaMedal />, href: '/achivements', label: 'achivements' },
+    { icon: <FaMedal />, href: '/achievements', label: 'achievements' },
   ];
 
   return (
@@ -55,7 +57,7 @@ export const Header: React.FC = () => {
               );
             })}
             <ThemeSwitcher />
-            <Button href="">
+            <Button onClick={openTerminal}>
               Open terminal <span className="text-accent"><FaCode size={20} /></span>
             </Button>
           </nav>
@@ -121,7 +123,7 @@ export const Header: React.FC = () => {
               <ThemeSwitcher />
             </div>
             <div className="pt-2">
-              <Button href="">
+              <Button onClick={openTerminal}>
                 Open terminal <span className="text-accent"><FaCode size={20} /></span>
               </Button>
             </div>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Button, TypingText } from '@/components/common';
 import { HeroLogo, DotsPattern, StatusBar, Quote } from '@/components/features/home';
 import { Contact } from '@/components/features/contact';
+import { useTerminal } from '@/components/layout';
 import { FaCode } from 'react-icons/fa';
 
 // Define 3 sentences for the main heading
@@ -35,6 +36,7 @@ export default function Home() {
   const heroImageRef = useRef<HTMLDivElement>(null);
   const heroLogoRef = useRef<HTMLDivElement>(null);
   const dotsPatternRef = useRef<HTMLDivElement>(null);
+  const { openTerminal } = useTerminal();
   
   // Use useInView to reliably detect when elements are in view, even on navigation
   // The hook will re-trigger on every component mount (navigation), but 'once: true' prevents re-animation while on the page
@@ -127,7 +129,7 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: 0.2 }}
                   className="pt-2"
                 >
-                  <Button href="">
+                  <Button onClick={openTerminal}>
                     Open terminal <span className="text-accent"><FaCode size={20} /></span>
                   </Button>
                 </motion.div>
