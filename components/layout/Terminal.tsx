@@ -12,6 +12,8 @@ interface CommandOutput {
   type: 'command' | 'output' | 'error';
   content: string | string[];
   isRoot?: boolean; // Track if command was executed as root
+  isAccepted?: boolean; // Track if command was accepted via Tab autocomplete
+  pathname?: string; // Track the path when command was executed
 }
 
 interface TerminalProps {
@@ -48,6 +50,7 @@ const INITIAL_HEIGHT = 500;
 const RESIZE_HANDLE_SIZE = 8;
 const EDGE_HANDLE_SIZE = 4;
 const MAX_HISTORY_LINES = 100;
+const MIN_VISIBLE_AREA = 100; // Minimum visible pixels required to grab and reposition window
 
 export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
@@ -135,12 +138,14 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const [isRoot, setIsRoot] = useState(false);
   const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
+  const [commandAccepted, setCommandAccepted] = useState(false); // Track if current command was accepted via Tab
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const previousWindowStateRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Sync with website theme
   useEffect(() => {
@@ -185,7 +190,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     };
   }, []);
 
-  // Handle window resize to keep terminal within bounds
+  // Handle window resize to keep terminal within bounds (with minimum visible area)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -197,19 +202,40 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
           height: window.innerHeight,
         }));
       } else {
-        setWindowState(prev => ({
-          ...prev,
-          x: Math.min(prev.x, Math.max(0, window.innerWidth - prev.width)),
-          y: Math.min(prev.y, Math.max(0, window.innerHeight - prev.height)),
-          width: Math.min(prev.width, window.innerWidth),
-          height: Math.min(prev.height, window.innerHeight),
-        }));
+        // Calculate constraints with minimum visible area
+        const minVisibleX = -(windowState.width - MIN_VISIBLE_AREA);
+        const maxVisibleX = window.innerWidth - MIN_VISIBLE_AREA;
+        const minVisibleY = -(windowState.height - MIN_VISIBLE_AREA);
+        const maxVisibleY = window.innerHeight - MIN_VISIBLE_AREA;
+
+        setWindowState(prev => {
+          let newX = prev.x;
+          let newY = prev.y;
+          let newWidth = prev.width;
+          let newHeight = prev.height;
+
+          // Constrain position to ensure minimum visible area
+          newX = Math.max(minVisibleX, Math.min(newX, maxVisibleX));
+          newY = Math.max(minVisibleY, Math.min(newY, maxVisibleY));
+
+          // Constrain width/height to viewport (but allow window to extend beyond)
+          newWidth = Math.min(prev.width, window.innerWidth + MIN_VISIBLE_AREA);
+          newHeight = Math.min(prev.height, window.innerHeight + MIN_VISIBLE_AREA);
+
+          return {
+            ...prev,
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight,
+          };
+        });
       }
     };
 
     window.addEventListener('resize', handleWindowResize);
     return () => window.removeEventListener('resize', handleWindowResize);
-  }, [isOpen, windowState.isMaximized]);
+  }, [isOpen, windowState.isMaximized, windowState.width, windowState.height]);
 
   // Handle smooth dragging with requestAnimationFrame
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -244,9 +270,16 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
         let newX = clientX - dragStart.x;
         let newY = clientY - dragStart.y;
 
-        // Keep window within bounds
-        newX = Math.max(0, Math.min(newX, window.innerWidth - windowState.width));
-        newY = Math.max(0, Math.min(newY, window.innerHeight - windowState.height));
+        // Allow dragging outside viewport, but enforce minimum visible area
+        // This ensures user can always grab and reposition the window
+        const minVisibleX = -(windowState.width - MIN_VISIBLE_AREA);
+        const maxVisibleX = window.innerWidth - MIN_VISIBLE_AREA;
+        const minVisibleY = -(windowState.height - MIN_VISIBLE_AREA);
+        const maxVisibleY = window.innerHeight - MIN_VISIBLE_AREA;
+
+        // Constrain to ensure minimum visible area is always present
+        newX = Math.max(minVisibleX, Math.min(newX, maxVisibleX));
+        newY = Math.max(minVisibleY, Math.min(newY, maxVisibleY));
 
         setWindowState(prev => ({ ...prev, x: newX, y: newY }));
       });
@@ -426,16 +459,37 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const handleMaximize = () => {
     if (windowState.isMaximized) {
       // Restore to previous size
-      setWindowState(prev => ({
-        ...prev,
-        isMaximized: false,
-        width: INITIAL_WIDTH,
-        height: INITIAL_HEIGHT,
-        x: window.innerWidth / 2 - INITIAL_WIDTH / 2,
-        y: window.innerHeight / 2 - INITIAL_HEIGHT / 2,
-      }));
+      const previousState = previousWindowStateRef.current;
+      if (previousState) {
+        setWindowState(prev => ({
+          ...prev,
+          isMaximized: false,
+          x: previousState.x,
+          y: previousState.y,
+          width: previousState.width,
+          height: previousState.height,
+        }));
+        previousWindowStateRef.current = null;
+      } else {
+        // Fallback to initial size if no previous state
+        setWindowState(prev => ({
+          ...prev,
+          isMaximized: false,
+          width: INITIAL_WIDTH,
+          height: INITIAL_HEIGHT,
+          x: window.innerWidth / 2 - INITIAL_WIDTH / 2,
+          y: window.innerHeight / 2 - INITIAL_HEIGHT / 2,
+        }));
+      }
     } else {
-      // Save current position and maximize
+      // Save current position and size before maximizing
+      previousWindowStateRef.current = {
+        x: windowState.x,
+        y: windowState.y,
+        width: windowState.width,
+        height: windowState.height,
+      };
+      // Maximize
       setWindowState(prev => ({
         ...prev,
         isMaximized: true,
@@ -447,22 +501,77 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  // const handleMinimize = () => {
-  //   setWindowState(prev => ({
-  //     ...prev,
-  //     isMinimized: !prev.isMinimized,
-  //   }));
-  // };
+  // Handle double-click on header to toggle maximize
+  const handleHeaderDoubleClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+    
+    e.preventDefault();
+    handleMaximize();
+  };
 
-  const handleClose = () => {
+  // Save current terminal state to sessionStorage
+  const saveTerminalState = () => {
+    try {
+      sessionStorage.setItem('terminalState', JSON.stringify({
+        commandHistory: commandHistory,
+        commandHistoryList: commandHistoryList,
+        isRoot: isRoot,
+        windowState: windowState,
+        shouldRestore: true, // Flag to indicate this is a hide/restore operation
+      }));
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const handleMinimize = () => {
+    // Save current state before closing
+    saveTerminalState();
+    onClose();
+  };
+
+  // Reset all terminal state to initial values
+  const resetTerminalState = () => {
+    // Reset command history to welcome message
+    setCommandHistory([
+      { type: 'output', content: 'Welcome to the terminal. Type "help" to see available commands.' }
+    ]);
+    setCurrentInput('');
+    setHistoryIndex(-1);
+    setCommandHistoryList([]);
+    setTabSuggestions([]);
+    setTabSuggestionIndex(-1);
+    setLastTabPress(0);
+    setInlineAutocomplete(null);
+    setIsExecuting(false);
+    setIsRoot(false);
+    setIsPasswordPrompt(false);
+    setPasswordInput('');
+    
+    // Reset window state
+    const initialSize = getInitialSize();
     setWindowState({
-      x: (typeof window !== 'undefined' ? window.innerWidth : 1920) / 2 - INITIAL_WIDTH / 2,
-      y: (typeof window !== 'undefined' ? window.innerHeight : 1080) / 2 - INITIAL_HEIGHT / 2,
-      width: INITIAL_WIDTH,
-      height: INITIAL_HEIGHT,
+      x: initialSize.x,
+      y: initialSize.y,
+      width: initialSize.width,
+      height: initialSize.height,
       isMaximized: false,
       isMinimized: false,
     });
+    
+    // Clear any saved state from sessionStorage
+    try {
+      sessionStorage.removeItem('terminalState');
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const handleClose = () => {
+    // Reset all internal state and clear history
+    resetTerminalState();
     onClose();
   };
 
@@ -475,7 +584,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     };
   }, []);
 
-  // Restore terminal state after reboot or navigation
+  // Restore terminal state after reboot, navigation, or hide/minimize
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
     
@@ -484,34 +593,60 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
       if (savedState) {
         const state = JSON.parse(savedState);
         
-        // Restore command history
-        if (state.commandHistory && Array.isArray(state.commandHistory) && state.commandHistory.length > 0) {
-          // Use setTimeout to avoid synchronous setState in effect
-          setTimeout(() => {
-            setCommandHistory(prev => {
-              // Merge saved history with welcome message if it exists
-              const welcomeMsg = prev.find(item => item.type === 'output' && typeof item.content === 'string' && item.content.includes('Welcome'));
-              if (welcomeMsg) {
-                return [welcomeMsg, ...state.commandHistory as CommandOutput[]];
-              }
-              return state.commandHistory as CommandOutput[];
-            });
-          }, 0);
-        }
-        
-        // Restore command history list for arrow key navigation
-        if (state.commandHistoryList && Array.isArray(state.commandHistoryList) && state.commandHistoryList.length > 0) {
-          setTimeout(() => {
-            setCommandHistoryList(state.commandHistoryList);
-          }, 0);
-        }
-        
-        // Clear saved state after restoring (but keep shouldReopen flag for TerminalWrapper)
-        const { shouldReopen, ...restState } = state;
-        if (shouldReopen) {
-          // Keep the flag for TerminalWrapper to handle
-          sessionStorage.setItem('terminalState', JSON.stringify({ ...restState, shouldReopen }));
+        // Restore state if shouldRestore flag is set (from hide/minimize) or shouldReopen (from reboot/blog)
+        if (state.shouldRestore || state.shouldReopen) {
+          // Restore command history
+          if (state.commandHistory && Array.isArray(state.commandHistory) && state.commandHistory.length > 0) {
+            // Use setTimeout to avoid synchronous setState in effect
+            setTimeout(() => {
+              setCommandHistory(prev => {
+                // Merge saved history with welcome message if it exists
+                const welcomeMsg = prev.find(item => item.type === 'output' && typeof item.content === 'string' && item.content.includes('Welcome'));
+                if (welcomeMsg) {
+                  return [welcomeMsg, ...state.commandHistory as CommandOutput[]];
+                }
+                return state.commandHistory as CommandOutput[];
+              });
+            }, 0);
+          }
+          
+          // Restore command history list for arrow key navigation
+          if (state.commandHistoryList && Array.isArray(state.commandHistoryList) && state.commandHistoryList.length > 0) {
+            setTimeout(() => {
+              setCommandHistoryList(state.commandHistoryList);
+            }, 0);
+          }
+          
+          // Restore root state if it was set
+          if (state.isRoot === true) {
+            setTimeout(() => {
+              setIsRoot(true);
+            }, 0);
+          }
+          
+          // Restore window state if it was saved
+          if (state.windowState && typeof state.windowState === 'object') {
+            setTimeout(() => {
+              setWindowState(prev => ({
+                ...prev,
+                ...state.windowState,
+                isMinimized: false, // Always show when restoring
+              }));
+            }, 0);
+          }
+          
+          // Clear shouldRestore flag after restoring (but keep shouldReopen for TerminalWrapper)
+          const { shouldRestore, shouldReopen, ...restState } = state;
+          if (shouldReopen) {
+            // Keep the flag for TerminalWrapper to handle
+            sessionStorage.setItem('terminalState', JSON.stringify({ ...restState, shouldReopen }));
+          } else if (shouldRestore) {
+            // Clear state completely after restoring from hide/minimize
+            // This ensures that if user closes terminal, it starts fresh next time
+            sessionStorage.removeItem('terminalState');
+          }
         } else {
+          // No restore flags - clear saved state
           sessionStorage.removeItem('terminalState');
         }
       }
@@ -570,9 +705,27 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   // Available routes
   const routes = ['/', '/about', '/achievements'];
 
+  // Available commands for autocomplete
+  const availableCommands = [
+    'help', 'ls', 'pwd', 'cd', 'uname', 'echo', 'clear',
+    'whoami', 'reboot', 'github', 'blog', 'theme',
+    'sudo', 'su', 'logout', 'exit'
+  ];
+
   // Get current path for pwd command
   const getCurrentPath = () => {
     return pathname || '/';
+  };
+
+  // Format pathname for display (use ~ for root, ~/path for subdirectories)
+  const getDisplayPath = (targetPath?: string) => {
+    const currentPath = targetPath || pathname || '/';
+    if (currentPath === '/') {
+      return '';
+    }
+    // Remove leading slash and format as ~/path
+    const pathWithoutSlash = currentPath.startsWith('/') ? currentPath.substring(1) : currentPath;
+    return `/${pathWithoutSlash}`;
   };
 
   // Count the number of display lines in command history
@@ -654,59 +807,124 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     return prefix;
   };
 
-  // Handle tab completion for cd command
+  // Handle tab completion for commands and cd paths
   const handleTabCompletion = (input: string): string => {
     const trimmed = input.trim();
-    if (!trimmed.toLowerCase().startsWith('cd ')) {
-      return input;
-    }
-
-    const pathPart = trimmed.substring(3).trim();
-    const matches = getMatchingRoutes(pathPart);
     
-    if (matches.length === 0) {
-      // No matches - keep input as is, clear suggestions
-      setTabSuggestions([]);
-      setTabSuggestionIndex(-1);
-      return input;
-    } else if (matches.length === 1) {
-      // Single match - auto-complete
-      const completed = `cd ${matches[0]}`;
-      setTabSuggestions([]);
-      setTabSuggestionIndex(-1);
-      return completed;
-    } else {
-      // Multiple matches - show suggestions and cycle through them
-      const now = Date.now();
-      const timeSinceLastTab = now - lastTabPress;
+    // Check if it's a cd command
+    if (trimmed.toLowerCase().startsWith('cd ')) {
+      const pathPart = trimmed.substring(3).trim();
+      const matches = getMatchingRoutes(pathPart);
       
-      // Check if we're cycling through the same set of matches
-      const isSameMatchSet = tabSuggestions.length === matches.length && 
-        tabSuggestions.every((s, i) => s === matches[i]);
-      
-      if (timeSinceLastTab < 500 && isSameMatchSet && tabSuggestionIndex >= 0) {
-        // Same matches, cycle through them
-        const nextIndex = (tabSuggestionIndex + 1) % matches.length;
-        setTabSuggestionIndex(nextIndex);
-        return `cd ${matches[nextIndex]}`;
+      if (matches.length === 0) {
+        // No matches - keep input as is, clear suggestions
+        setTabSuggestions([]);
+        setTabSuggestionIndex(-1);
+        setCommandAccepted(false);
+        return input;
+      } else if (matches.length === 1) {
+        // Single match - auto-complete
+        const completed = `cd ${matches[0]}`;
+        setTabSuggestions([]);
+        setTabSuggestionIndex(-1);
+        setCommandAccepted(true);
+        setInlineAutocomplete(null); // Clear autocomplete when fully accepted
+        return completed;
       } else {
-        // New matches or first tab press - find common prefix first
-        const commonPrefix = getCommonPrefix(matches);
-        if (commonPrefix && commonPrefix.length > pathPart.length) {
-          // Complete to common prefix
-          setTabSuggestions(matches);
-          setTabSuggestionIndex(-1);
-          setLastTabPress(now);
-          return `cd ${commonPrefix}`;
+        // Multiple matches - show suggestions and cycle through them
+        const now = Date.now();
+        const timeSinceLastTab = now - lastTabPress;
+        
+        // Check if we're cycling through the same set of matches
+        const isSameMatchSet = tabSuggestions.length === matches.length && 
+          tabSuggestions.every((s, i) => s === matches[i]);
+        
+        if (timeSinceLastTab < 500 && isSameMatchSet && tabSuggestionIndex >= 0) {
+          // Same matches, cycle through them
+          const nextIndex = (tabSuggestionIndex + 1) % matches.length;
+          setTabSuggestionIndex(nextIndex);
+          setCommandAccepted(true);
+          setInlineAutocomplete(null); // Clear autocomplete when cycling to a match
+          return `cd ${matches[nextIndex]}`;
         } else {
-          // No common prefix, show first match
-          setTabSuggestions(matches);
-          setTabSuggestionIndex(0);
-          setLastTabPress(now);
-          return `cd ${matches[0]}`;
+          // New matches or first tab press - find common prefix first
+          const commonPrefix = getCommonPrefix(matches);
+          if (commonPrefix && commonPrefix.length > pathPart.length) {
+            // Complete to common prefix
+            setTabSuggestions(matches);
+            setTabSuggestionIndex(-1);
+            setLastTabPress(now);
+            setCommandAccepted(false);
+            return `cd ${commonPrefix}`;
+          } else {
+            // No common prefix, show first match
+            setTabSuggestions(matches);
+            setTabSuggestionIndex(0);
+            setLastTabPress(now);
+            setCommandAccepted(false);
+            return `cd ${matches[0]}`;
+          }
         }
       }
     }
+
+    // Check for command autocomplete (only if no space, meaning it's just a command name)
+    if (!trimmed.includes(' ')) {
+      const matches = getMatchingCommands(trimmed);
+      
+      if (matches.length === 0) {
+        // No matches - keep input as is, clear suggestions
+        setTabSuggestions([]);
+        setTabSuggestionIndex(-1);
+        setCommandAccepted(false);
+        return input;
+      } else if (matches.length === 1) {
+        // Single match - auto-complete
+        setTabSuggestions([]);
+        setTabSuggestionIndex(-1);
+        setCommandAccepted(true);
+        return matches[0];
+      } else {
+        // Multiple matches - show suggestions and cycle through them
+        const now = Date.now();
+        const timeSinceLastTab = now - lastTabPress;
+        
+        // Check if we're cycling through the same set of matches
+        const isSameMatchSet = tabSuggestions.length === matches.length && 
+          tabSuggestions.every((s, i) => s === matches[i]);
+        
+        if (timeSinceLastTab < 500 && isSameMatchSet && tabSuggestionIndex >= 0) {
+          // Same matches, cycle through them
+          const nextIndex = (tabSuggestionIndex + 1) % matches.length;
+          setTabSuggestionIndex(nextIndex);
+          setCommandAccepted(true);
+          setInlineAutocomplete(null); // Clear autocomplete when cycling to a match
+          return matches[nextIndex];
+        } else {
+          // New matches or first tab press - find common prefix first
+          const commonPrefix = getCommonPrefix(matches);
+          if (commonPrefix && commonPrefix.length > trimmed.length) {
+            // Complete to common prefix
+            setTabSuggestions(matches);
+            setTabSuggestionIndex(-1);
+            setLastTabPress(now);
+            setCommandAccepted(false);
+            return commonPrefix;
+          } else {
+            // No common prefix, show first match
+            setTabSuggestions(matches);
+            setTabSuggestionIndex(0);
+            setLastTabPress(now);
+            setCommandAccepted(true);
+            return matches[0];
+          }
+        }
+      }
+    }
+
+    // No autocomplete for other cases
+    setCommandAccepted(false);
+    return input;
   };
 
   // Execute commands
@@ -717,7 +935,15 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     }
 
     const [cmd, ...args] = trimmedCommand.split(' ');
-    const output: CommandOutput[] = [{ type: 'command', content: trimmedCommand, isRoot }];
+    const output: CommandOutput[] = [{ 
+      type: 'command', 
+      content: trimmedCommand, 
+      isRoot,
+      isAccepted: commandAccepted, // Track if command was accepted via Tab
+      pathname: pathname || '/' // Store the path when command was executed
+    }];
+    // Reset command accepted flag after adding to history
+    setCommandAccepted(false);
 
     switch (cmd.toLowerCase()) {
       case 'help':
@@ -729,7 +955,6 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
             '  ls         - List available site routes',
             '  pwd        - Display the current route',
             '  cd <path>  - Navigate to the given route (e.g., cd /about)',
-            '  cd ..      - Return to the previous route',
             '  uname      - Display browser information',
             '  echo <text> - Print the provided text',
             '  clear      - Clear the terminal output',
@@ -739,7 +964,6 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
             '  blog       - Open blog page',
             '  theme      - Toggle between light and dark theme',
             '  sudo su    - Switch to root user (requires password)',
-            '  su         - Switch to root user (requires password)',
             '  logout     - Switch back to normal user (if root)',
             '  exit       - Close the terminal',
           ]
@@ -766,29 +990,6 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
             type: 'error',
             content: 'cd: missing argument'
           });
-        } else if (args[0] === '..') {
-          // Navigate to parent route
-          const currentPath = getCurrentPath();
-          if (currentPath === '/') {
-            output.push({
-              type: 'error',
-              content: 'cd: already at root directory'
-            });
-          } else {
-            const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
-            if (routes.includes(parentPath)) {
-              router.push(parentPath);
-              output.push({
-                type: 'output',
-                content: `Navigated to ${parentPath}`
-              });
-            } else {
-              output.push({
-                type: 'error',
-                content: `cd: ${parentPath}: No such route`
-              });
-            }
-          }
         } else {
           const targetPath = args[0].startsWith('/') ? args[0] : `/${args[0]}`;
           if (routes.includes(targetPath)) {
@@ -1197,11 +1398,14 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
           {
             type: 'command' as const,
             content: '',
-            isRoot
+            isRoot,
+            isAccepted: false
           }
         ];
         return limitHistory(newHistory);
       });
+      // Reset command accepted flag
+      setCommandAccepted(false);
       // Focus input after empty command is processed
       setTimeout(() => {
         if (inputRef.current) {
@@ -1211,41 +1415,75 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  // Get inline autocomplete suggestion for cd command
+  // Get matching commands for autocomplete
+  const getMatchingCommands = (partial: string): string[] => {
+    if (!partial) return availableCommands;
+    const lowerPartial = partial.toLowerCase();
+    return availableCommands.filter(cmd => cmd.toLowerCase().startsWith(lowerPartial));
+  };
+
+  // Get inline autocomplete suggestion for commands and cd paths
   const getInlineAutocomplete = (input: string): { matched: string; unmatched: string } | null => {
     const trimmed = input.trim();
-    if (!trimmed.toLowerCase().startsWith('cd ')) {
-      return null;
-    }
+    if (!trimmed) return null;
 
-    const pathPart = trimmed.substring(3).trim();
-    if (!pathPart) {
-      return null;
-    }
-
-    const matches = getMatchingRoutes(pathPart);
-    
-    if (matches.length === 1) {
-      // Single match - show autocomplete
-      const match = matches[0];
-      const normalizedPath = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
-      
-      if (match.startsWith(normalizedPath) && match.length > normalizedPath.length) {
-        return {
-          matched: trimmed, // Full input including "cd "
-          unmatched: match.substring(normalizedPath.length)
-        };
+    // Check if it's a cd command
+    if (trimmed.toLowerCase().startsWith('cd ')) {
+      const pathPart = trimmed.substring(3).trim();
+      if (!pathPart) {
+        return null;
       }
-    } else if (matches.length > 1) {
-      // Multiple matches - show common prefix
-      const commonPrefix = getCommonPrefix(matches);
-      const normalizedPath = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
+
+      const matches = getMatchingRoutes(pathPart);
       
-      if (commonPrefix.startsWith(normalizedPath) && commonPrefix.length > normalizedPath.length) {
-        return {
-          matched: trimmed, // Full input including "cd "
-          unmatched: commonPrefix.substring(normalizedPath.length)
-        };
+      if (matches.length === 1) {
+        // Single match - show autocomplete
+        const match = matches[0];
+        const normalizedPath = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
+        
+        if (match.startsWith(normalizedPath) && match.length > normalizedPath.length) {
+          return {
+            matched: trimmed, // Full input including "cd "
+            unmatched: match.substring(normalizedPath.length)
+          };
+        }
+      } else if (matches.length > 1) {
+        // Multiple matches - show common prefix
+        const commonPrefix = getCommonPrefix(matches);
+        const normalizedPath = pathPart.startsWith('/') ? pathPart : `/${pathPart}`;
+        
+        if (commonPrefix.startsWith(normalizedPath) && commonPrefix.length > normalizedPath.length) {
+          return {
+            matched: trimmed, // Full input including "cd "
+            unmatched: commonPrefix.substring(normalizedPath.length)
+          };
+        }
+      }
+      return null;
+    }
+
+    // Check for command autocomplete (only if no space, meaning it's just a command name)
+    if (!trimmed.includes(' ')) {
+      const matches = getMatchingCommands(trimmed);
+      
+      if (matches.length === 1) {
+        // Single match - show autocomplete
+        const match = matches[0];
+        if (match.toLowerCase().startsWith(trimmed.toLowerCase()) && match.length > trimmed.length) {
+          return {
+            matched: trimmed,
+            unmatched: match.substring(trimmed.length)
+          };
+        }
+      } else if (matches.length > 1) {
+        // Multiple matches - show common prefix
+        const commonPrefix = getCommonPrefix(matches);
+        if (commonPrefix.toLowerCase().startsWith(trimmed.toLowerCase()) && commonPrefix.length > trimmed.length) {
+          return {
+            matched: trimmed,
+            unmatched: commonPrefix.substring(trimmed.length)
+          };
+        }
       }
     }
     
@@ -1262,6 +1500,9 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
       setTabSuggestions([]);
       setTabSuggestionIndex(-1);
     }
+    
+    // Clear command accepted flag when user types
+    setCommandAccepted(false);
     
     // Update inline autocomplete
     const autocomplete = getInlineAutocomplete(newValue);
@@ -1300,7 +1541,9 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
       e.preventDefault();
       const completed = handleTabCompletion(currentInput);
       setCurrentInput(completed);
+      
       // Update inline autocomplete after tab completion
+      // If command was fully accepted (single match), autocomplete will be cleared in handleTabCompletion
       const autocomplete = getInlineAutocomplete(completed);
       setInlineAutocomplete(autocomplete);
       // Reset tab suggestions after a delay if user types something else
@@ -1417,6 +1660,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
               <div
                 ref={headerRef}
                 onMouseDown={handleMouseDown}
+                onDoubleClick={handleHeaderDoubleClick}
                 onTouchStart={(e) => {
                   // Enable touch dragging on mobile
                   if (isMobile && !windowState.isMaximized && !windowState.isMinimized) {
@@ -1446,7 +1690,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                     <span className="w-1.5 h-1.5 rounded-full bg-[#740000] opacity-0 group-hover:opacity-100 transition-opacity"></span>
                   </button>
                   <button
-                    onClick={handleClose}
+                    onClick={handleMinimize}
                     className="w-4 h-4 rounded-full bg-[#ffbd2e] hover:bg-[#ffb400] transition-colors flex items-center justify-center group"
                     aria-label="Minimize"
                   >
@@ -1497,6 +1741,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                                 <span className="mt-1">{item.isRoot ? 'root@portfolio' : 'user@portfolio'}</span>
                                 <span className="mt-1 text-text-secondary">|</span>
                                 <span className="mt-1 text-base text-green-500">~</span>
+                                <span className="mt-1 text-sm font-mono text-green-500">{getDisplayPath(item.pathname)}</span>
                               </span>
                               <div 
                                 className="mt-1 flex-1"
@@ -1516,11 +1761,13 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                               <div className='mt-1 text-green-500 font-semibold font-momo'>webshell</div>
                             </div>
                             {/* Second line: Command with prompt */}
-                            <div className="-ml-1 flex items-center gap-2 mb-1">
+                            <div className="-ml-1 flex items-center gap-2 mb-2">
                               <span className={item.isRoot ? 'text-red-500' : (theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]')}>
                                 <RiArrowRightWideLine size={16} />
                               </span>
-                              <span className={theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'}>{item.content}</span>
+                              <span className={item.isAccepted ? 'text-green-500' : (theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]')}>
+                                {item.content}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1556,6 +1803,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                             <span className="mt-1">{isRoot ? 'root@portfolio' : 'user@portfolio'}</span>
                             <span className="mt-1 text-text-secondary">|</span>
                             <span className="mt-1 text-base text-green-500">~</span>
+                            <span className="mt-1 text-sm font-mono text-green-500">{getDisplayPath()}</span>
                           </div>
                           <div 
                             className="mt-1 flex-1"
@@ -1575,7 +1823,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                           <div className='mt-1 text-green-500 font-semibold font-momo'>webshell</div>
                         </div>
                         {/* Second line: Input field with prompt */}
-                        <div className="-ml-1 flex items-center gap-2 mb-1">
+                        <div className="-ml-1 flex items-center gap-2 mb-2">
                           <span className={isRoot ? 'text-red-500' : (theme === 'dark' ? 'text-[#5fd7ff]' : 'text-[#0066cc]')}>
                             <RiArrowRightWideLine size={16} />
                           </span>
@@ -1594,7 +1842,9 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                                 onKeyDown={handleKeyDown}
                                 disabled={isExecuting}
                                 className={`w-full bg-transparent border-none outline-none relative z-10 ${
-                                  theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]'
+                                  commandAccepted 
+                                    ? 'text-green-500' 
+                                    : (theme === 'dark' ? 'text-[#d0d0d0]' : 'text-[#000000]')
                                 } ${isExecuting ? 'opacity-50 cursor-wait' : ''}`}
                                 autoFocus
                                 autoComplete="off"
