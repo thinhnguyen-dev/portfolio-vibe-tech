@@ -1490,10 +1490,107 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     return null;
   };
 
+  // Convert Vietnamese Unicode characters to ASCII equivalents
+  const vietnameseToAscii = (text: string): string => {
+    // Map Vietnamese characters to ASCII equivalents
+    const vietnameseMap: { [key: string]: string } = {
+      // đ and Đ
+      'đ': 'd', 'Đ': 'D',
+      // ư and ư with tones
+      'ư': 'w', 'Ư': 'W',
+      'ứ': 'w', 'Ứ': 'W', 'ừ': 'w', 'Ừ': 'W',
+      'ử': 'w', 'Ử': 'W', 'ữ': 'w', 'Ữ': 'W',
+      'ự': 'w', 'Ự': 'W',
+      // ơ and ơ with tones
+      'ơ': 'ow', 'Ơ': 'OW',
+      'ớ': 'ow', 'Ớ': 'OW', 'ờ': 'ow', 'Ờ': 'OW',
+      'ở': 'ow', 'Ở': 'OW', 'ỡ': 'ow', 'Ỡ': 'OW',
+      'ợ': 'ow', 'Ợ': 'OW',
+      // ă and ă with tones
+      'ă': 'aa', 'Ă': 'AA',
+      'ắ': 'aa', 'Ắ': 'AA', 'ằ': 'aa', 'Ằ': 'AA',
+      'ẳ': 'aa', 'Ẳ': 'AA', 'ẵ': 'aa', 'Ẵ': 'AA',
+      'ặ': 'aa', 'Ặ': 'AA',
+      // â and â with tones
+      'â': 'aa', 'Â': 'AA',
+      'ấ': 'aa', 'Ấ': 'AA', 'ầ': 'aa', 'Ầ': 'AA',
+      'ẩ': 'aa', 'Ẩ': 'AA', 'ẫ': 'aa', 'Ẫ': 'AA',
+      'ậ': 'aa', 'Ậ': 'AA',
+      // ê and ê with tones
+      'ê': 'ee', 'Ê': 'EE',
+      'ế': 'ee', 'Ế': 'EE', 'ề': 'ee', 'Ề': 'EE',
+      'ể': 'ee', 'Ể': 'EE', 'ễ': 'ee', 'Ễ': 'EE',
+      'ệ': 'ee', 'Ệ': 'EE',
+      // ô and ô with tones
+      'ô': 'oo', 'Ô': 'OO',
+      'ố': 'oo', 'Ố': 'OO', 'ồ': 'oo', 'Ồ': 'OO',
+      'ổ': 'oo', 'Ổ': 'OO', 'ỗ': 'oo', 'Ỗ': 'OO',
+      'ộ': 'oo', 'Ộ': 'OO',
+      // á, à, ả, ã, ạ and uppercase
+      'á': 'as', 'Á': 'AS', 'à': 'af', 'À': 'AF',
+      'ả': 'ar', 'Ả': 'AR', 'ã': 'ax', 'Ã': 'AX',
+      'ạ': 'aj', 'Ạ': 'AJ',
+      // é, è, ẻ, ẽ, ẹ and uppercase
+      'é': 'es', 'É': 'ES', 'è': 'ef', 'È': 'EF',
+      'ẻ': 'er', 'Ẻ': 'ER', 'ẽ': 'ex', 'Ẽ': 'EX',
+      'ẹ': 'ej', 'Ẹ': 'EJ',
+      // í, ì, ỉ, ĩ, ị and uppercase
+      'í': 'is', 'Í': 'IS', 'ì': 'if', 'Ì': 'IF',
+      'ỉ': 'ir', 'Ỉ': 'IR', 'ĩ': 'ix', 'Ĩ': 'IX',
+      'ị': 'ij', 'Ị': 'IJ',
+      // ó, ò, ỏ, õ, ọ and uppercase
+      'ó': 'os', 'Ó': 'OS', 'ò': 'of', 'Ò': 'OF',
+      'ỏ': 'or', 'Ỏ': 'OR', 'õ': 'ox', 'Õ': 'OX',
+      'ọ': 'oj', 'Ọ': 'OJ',
+      // ú, ù, ủ, ũ, ụ and uppercase
+      'ú': 'us', 'Ú': 'US', 'ù': 'uf', 'Ù': 'UF',
+      'ủ': 'ur', 'Ủ': 'UR', 'ũ': 'ux', 'Ũ': 'UX',
+      'ụ': 'uj', 'Ụ': 'UJ',
+      // ý, ỳ, ỷ, ỹ, ỵ and uppercase
+      'ý': 'ys', 'Ý': 'YS', 'ỳ': 'yf', 'Ỳ': 'YF',
+      'ỷ': 'yr', 'Ỷ': 'YR', 'ỹ': 'yx', 'Ỹ': 'YX',
+      'ỵ': 'yj', 'Ỵ': 'YJ',
+    };
+
+    let result = text;
+    
+    // Replace Vietnamese characters with ASCII equivalents
+    for (const [vietnamese, ascii] of Object.entries(vietnameseMap)) {
+      result = result.replace(new RegExp(vietnamese, 'g'), ascii);
+    }
+
+    // Normalize remaining accented characters to their base ASCII equivalents
+    // This handles any other accented characters not in the map above
+    result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    return result;
+  };
+
   // Handle input change - clear tab suggestions when user types and update inline autocomplete
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setCurrentInput(newValue);
+    const rawValue = e.target.value;
+    // Convert Vietnamese Unicode to ASCII in real-time
+    const newValue = vietnameseToAscii(rawValue);
+    
+    // If conversion changed the value, update the input and preserve cursor position
+    if (newValue !== rawValue && inputRef.current) {
+      const input = inputRef.current;
+      const cursorPosition = input.selectionStart || 0;
+      const lengthDiff = newValue.length - rawValue.length;
+      
+      // Update the value
+      setCurrentInput(newValue);
+      
+      // Restore cursor position after state update
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newCursorPosition = Math.max(0, Math.min(cursorPosition + lengthDiff, newValue.length));
+          inputRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+      }, 0);
+    } else {
+      setCurrentInput(newValue);
+    }
     
     // Clear tab suggestions when user modifies input
     if (tabSuggestions.length > 0) {
