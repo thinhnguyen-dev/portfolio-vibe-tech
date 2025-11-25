@@ -1517,10 +1517,10 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
       'ẩ': 'aa', 'Ẩ': 'AA', 'ẫ': 'aa', 'Ẫ': 'AA',
       'ậ': 'aa', 'Ậ': 'AA',
       // ê and ê with tones
-      'ê': 'ee', 'Ê': 'EE',
-      'ế': 'ee', 'Ế': 'EE', 'ề': 'ee', 'Ề': 'EE',
-      'ể': 'ee', 'Ể': 'EE', 'ễ': 'ee', 'Ễ': 'EE',
-      'ệ': 'ee', 'Ệ': 'EE',
+      // 'ê': 'e', 'Ê': 'EE',
+      // 'ế': 'e', 'Ế': 'EE', 'ề': 'ee', 'Ề': 'EE',
+      // 'ể': 'e', 'Ể': 'EE', 'ễ': 'ee', 'Ễ': 'EE',
+      // 'ệ': 'e', 'Ệ': 'EE',
       // ô and ô with tones
       'ô': 'oo', 'Ô': 'OO',
       'ố': 'oo', 'Ố': 'OO', 'ồ': 'oo', 'Ồ': 'OO',
