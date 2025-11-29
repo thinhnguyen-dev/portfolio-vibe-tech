@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
+@import "react-toastify/dist/ReactToastify.css";
 
 /* Dark theme (default) */
 :root,
@@ -354,4 +355,86 @@ samp {
   100% {
     transform: translateX(100%);
   }
+}
+
+/* Toast Notification Styles - Theme-aware */
+.Toastify__toast-container {
+  font-family: var(--font-fira-code), 'Fira Code', monospace;
+}
+
+.Toastify__toast {
+  background: var(--article-bg) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  padding: 1rem !important;
+  min-height: auto !important;
+}
+
+.Toastify__toast-body {
+  color: var(--foreground) !important;
+  font-family: var(--font-fira-code), 'Fira Code', monospace !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.Toastify__toast--success {
+  background: var(--article-bg) !important;
+  border-left: 4px solid #10b981 !important;
+}
+
+.Toastify__toast--error {
+  background: var(--article-bg) !important;
+  border-left: 4px solid #ef4444 !important;
+}
+
+.Toastify__toast--info {
+  background: var(--article-bg) !important;
+  border-left: 4px solid var(--accent) !important;
+}
+
+.Toastify__toast--warning {
+  background: var(--article-bg) !important;
+  border-left: 4px solid #f59e0b !important;
+}
+
+.Toastify__progress-bar {
+  background: var(--accent) !important;
+}
+
+.Toastify__progress-bar--success {
+  background: #10b981 !important;
+}
+
+.Toastify__progress-bar--error {
+  background: #ef4444 !important;
+}
+
+.Toastify__progress-bar--info {
+  background: var(--accent) !important;
+}
+
+.Toastify__progress-bar--warning {
+  background: #f59e0b !important;
+}
+
+.Toastify__close-button {
+  color: var(--text-secondary) !important;
+  opacity: 0.7 !important;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1 !important;
+  color: var(--foreground) !important;
+}
+
+/* Dark theme specific adjustments */
+:root.dark .Toastify__toast {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Light theme specific adjustments */
+:root.light .Toastify__toast {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }

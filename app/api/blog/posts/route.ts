@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       excerpt: post.description,
       date: post.createdAt.toISOString().split('T')[0],
       image: post.thumbnail,
+      blogId: post.blogId, // Include UUID for unique key
     }));
     
     return NextResponse.json({
