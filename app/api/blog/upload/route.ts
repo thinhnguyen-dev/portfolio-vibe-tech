@@ -11,8 +11,15 @@ import {
 } from '@/lib/firebase/blog';
 import { clearCache } from '@/lib/blog/cache';
 
+// Detect serverless environment (Vercel, AWS Lambda, etc.)
+// In serverless, use /tmp for writable temp files, otherwise use project temp directory
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT;
+const tempBaseDir = isServerless 
+  ? path.join('/tmp', 'blog-extracts')
+  : path.join(process.cwd(), 'temp', 'blog-extracts');
+
 const blogDirectory = path.join(process.cwd(), 'content/blog');
-const tempExtractDirectory = path.join(process.cwd(), 'temp', 'blog-extracts');
+const tempExtractDirectory = tempBaseDir;
 const MAX_ZIP_SIZE = 100 * 1024 * 1024; // 100MB
 
 export async function POST(request: NextRequest) {
@@ -42,8 +49,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!fs.existsSync(blogDirectory)) {
-      fs.mkdirSync(blogDirectory, { recursive: true });
+    // Try to create blog directory if it doesn't exist (may fail in serverless, that's OK)
+    try {
+      if (!fs.existsSync(blogDirectory)) {
+        fs.mkdirSync(blogDirectory, { recursive: true });
+      }
+    } catch (error) {
+      // In serverless environments, local file system may be read-only
+      // This is OK since we're uploading to Firebase Storage anyway
+      console.warn('Could not create blog directory (non-critical in serverless):', error);
     }
 
     let content: string;
@@ -63,6 +77,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Create temporary extraction directory
+      // Ensure parent directory exists
+      try {
+        if (!fs.existsSync(tempExtractDirectory)) {
+          fs.mkdirSync(tempExtractDirectory, { recursive: true });
+        }
+      } catch (error) {
+        console.error('Failed to create temp extraction directory:', error);
+        return NextResponse.json(
+          { error: 'Failed to create temporary directory for extraction' },
+          { status: 500 }
+        );
+      }
+      
       const extractId = `extract-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const extractDir = path.join(tempExtractDirectory, extractId);
       
@@ -167,14 +194,18 @@ export async function POST(request: NextRequest) {
     
     // Also save markdown file to local filesystem as backup (optional)
     // This can be removed if you want to rely entirely on Firebase Storage
+    // In serverless environments, this may fail (read-only filesystem), which is OK
     try {
       if (!fs.existsSync(blogDirectory)) {
         fs.mkdirSync(blogDirectory, { recursive: true });
       }
       fs.writeFileSync(filePath, content, 'utf-8');
     } catch (error) {
-      console.error('Failed to save markdown to local filesystem:', error);
-      // Non-critical, continue
+      // Non-critical - in serverless environments, local filesystem is read-only
+      // We're already saving to Firebase Storage, so this is just a backup
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to save markdown to local filesystem (non-critical):', error);
+      }
     }
 
     return NextResponse.json({
