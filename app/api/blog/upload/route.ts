@@ -7,7 +7,9 @@ import {
   uploadImageToStorage, 
   getBlogThumbnailPath,
   uploadBlogImagesToStorage,
-  uploadMarkdownToStorage
+  uploadMarkdownToStorage,
+  generateUUID,
+  getBlogPostMetadataBySlug
 } from '@/lib/firebase/blog';
 import { clearCache } from '@/lib/blog/cache';
 
@@ -103,22 +105,6 @@ export async function POST(request: NextRequest) {
           : extractedData.markdownFileName.replace(/\.md$/i, '');
         extractedImages = extractedData.images;
 
-        // Upload images to Firebase Storage and get URL mappings
-        const blogId = slug;
-        let imageUrlMap = new Map<string, string>();
-        
-        if (extractedImages.length > 0) {
-          try {
-            imageUrlMap = await uploadBlogImagesToStorage(blogId, extractedImages);
-          } catch (error) {
-            console.error('Failed to upload images to Firebase Storage:', error);
-            // Continue even if image upload fails
-          }
-        }
-
-        // Update image paths in markdown content with Firebase Storage URLs
-        content = updateImagePathsWithFirebaseUrls(content, imageUrlMap);
-
         // Clean up temporary extraction directory
         if (fs.existsSync(extractDir)) {
           fs.rmSync(extractDir, { recursive: true, force: true });
@@ -139,11 +125,32 @@ export async function POST(request: NextRequest) {
         : file.name.replace(/\.md$/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     }
 
-    const filePath = path.join(blogDirectory, `${slug}.md`);
-    const isUpdate = fs.existsSync(filePath);
+    // Check if this is an update (existing post with same slug)
+    let uuid: string;
+    const existingPost = await getBlogPostMetadataBySlug(slug);
+    const isUpdate = !!existingPost;
     
-    // Generate blog ID (same as slug for consistency)
-    const blogId = slug;
+    if (existingPost) {
+      // Update existing post - use existing UUID
+      uuid = existingPost.blogId;
+    } else {
+      // New post - generate UUID
+      uuid = generateUUID();
+    }
+    
+    // Upload images to Firebase Storage and get URL mappings (for ZIP files)
+    let imageUrlMap = new Map<string, string>();
+    
+    if (extractedImages.length > 0) {
+      try {
+        imageUrlMap = await uploadBlogImagesToStorage(uuid, extractedImages);
+        // Update image paths in markdown content with Firebase Storage URLs
+        content = updateImagePathsWithFirebaseUrls(content, imageUrlMap);
+      } catch (error) {
+        console.error('Failed to upload images to Firebase Storage:', error);
+        // Continue even if image upload fails
+      }
+    }
     
     // Handle thumbnail: upload to Firebase Storage if file provided, otherwise use URL
     let thumbnailURL: string = image || '/default_blog_img.png';
@@ -151,7 +158,7 @@ export async function POST(request: NextRequest) {
     if (thumbnailFile) {
       // Upload thumbnail file to Firebase Storage
       try {
-        const thumbnailPath = getBlogThumbnailPath(blogId, thumbnailFile.name || 'thumbnail');
+        const thumbnailPath = getBlogThumbnailPath(uuid, thumbnailFile.name || 'thumbnail');
         thumbnailURL = await uploadImageToStorage(
           thumbnailFile,
           thumbnailPath,
@@ -172,9 +179,9 @@ export async function POST(request: NextRequest) {
     
     // Upload Markdown file to Firebase Storage
     try {
-      await uploadMarkdownToStorage(blogId, content);
-      // Clear cache when content is updated
-      clearCache(blogId);
+      await uploadMarkdownToStorage(uuid, content);
+      // Clear cache when content is updated (use slug for cache key)
+      clearCache(slug);
     } catch (error) {
       console.error('Failed to upload markdown to Firebase Storage:', error);
       // Continue even if upload fails
@@ -182,7 +189,7 @@ export async function POST(request: NextRequest) {
     
     // Save metadata to Firestore
     try {
-      await saveBlogPostMetadata(blogId, {
+      await saveBlogPostMetadata(uuid, slug, {
         title: finalTitle,
         description: finalDescription,
         thumbnail: thumbnailURL,
@@ -199,6 +206,7 @@ export async function POST(request: NextRequest) {
       if (!fs.existsSync(blogDirectory)) {
         fs.mkdirSync(blogDirectory, { recursive: true });
       }
+      const filePath = path.join(blogDirectory, `${slug}.md`);
       fs.writeFileSync(filePath, content, 'utf-8');
     } catch (error) {
       // Non-critical - in serverless environments, local filesystem is read-only
@@ -212,7 +220,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: isUpdate ? 'Blog post updated successfully' : 'Blog post uploaded successfully',
       extractedImages: extractedImages.length,
-      blogId,
+      uuid,
+      slug,
       thumbnail: thumbnailURL,
     });
   } catch (error) {

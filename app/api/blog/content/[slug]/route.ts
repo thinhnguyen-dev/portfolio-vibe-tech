@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { downloadMarkdownFromStorage, getBlogPostMetadata } from '@/lib/firebase/blog';
+import { downloadMarkdownFromStorage, getBlogPostMetadataBySlug } from '@/lib/firebase/blog';
 import { getCachedContent, saveToCache, isCacheValid } from '@/lib/blog/cache';
 
 export async function GET(
@@ -16,8 +16,8 @@ export async function GET(
       );
     }
     
-    // First, check if blog exists in Firestore
-    const blogMetadata = await getBlogPostMetadata(slug);
+    // First, check if blog exists in Firestore by slug
+    const blogMetadata = await getBlogPostMetadataBySlug(slug);
     if (!blogMetadata) {
       // Blog doesn't exist in Firestore - return 404
       return NextResponse.json(
@@ -26,7 +26,10 @@ export async function GET(
       );
     }
     
-    // Check cache first
+    // Get UUID from metadata
+    const uuid = blogMetadata.blogId;
+    
+    // Check cache first (using slug as cache key for backward compatibility)
     if (isCacheValid(slug)) {
       const cachedContent = getCachedContent(slug);
       if (cachedContent) {
@@ -37,11 +40,11 @@ export async function GET(
       }
     }
     
-    // Fetch from Firebase Storage
+    // Fetch from Firebase Storage using UUID
     try {
-      const content = await downloadMarkdownFromStorage(slug);
+      const content = await downloadMarkdownFromStorage(uuid);
       
-      // Save to cache
+      // Save to cache (using slug as cache key)
       saveToCache(slug, content);
       
       return NextResponse.json({

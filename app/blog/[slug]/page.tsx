@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -16,10 +16,28 @@ import { IoArrowBackCircle } from 'react-icons/io5';
 export default function BlogPostPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params?.slug as string;
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
+  useEffect(() => {
+    // Check if we're in admin mode by checking query params or referrer
+    const fromParam = searchParams?.get('from');
+    const isFromAdmin = fromParam === 'admin';
+    
+    // Also check referrer as fallback
+    if (typeof window !== 'undefined') {
+      const referrer = document.referrer;
+      const isFromAdminReferrer = Boolean(referrer && referrer.includes('/admin/blog'));
+      
+      setIsAdminMode(isFromAdmin || isFromAdminReferrer);
+    } else {
+      setIsAdminMode(isFromAdmin);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -374,7 +392,7 @@ export default function BlogPostPage() {
 
   return (
     <div className="container mx-auto px-12 sm:px-14 md:px-16 max-w-7xl p-8">
-      <Button href="/blog" className="mb-4">
+      <Button href={isAdminMode ? "/admin/blog" : "/blog"} className="mb-4">
         Back to Blog
         <IoArrowBackCircle size={20} />
       </Button>

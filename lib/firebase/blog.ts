@@ -14,6 +14,7 @@ import {
   orderBy,
   limit,
   startAfter,
+  where,
   Timestamp,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
@@ -22,6 +23,7 @@ import {
   uploadBytes, 
   getDownloadURL, 
   deleteObject,
+  listAll,
 } from 'firebase/storage';
 
 // Firestore collection name
@@ -29,24 +31,26 @@ const BLOG_COLLECTION = 'blogPosts';
 
 // Blog metadata interface for Firestore
 export interface BlogPostFirestoreData {
-  blogId: string; // Unique identifier (slug)
+  blogId: string; // UUID (primary identifier)
+  uuid: string; // UUIDv4 (same as blogId, kept for backward compatibility)
   title: string;
   description: string;
   thumbnail: string; // URL to thumbnail image
   createdAt: Timestamp;
   modifiedAt: Timestamp;
-  slug: string; // Same as blogId for consistency
+  slug: string; // URL-friendly slug for routing
 }
 
 // Convert Firestore data to a more usable format
 export interface BlogPostMetadata {
-  blogId: string;
+  blogId: string; // UUID (primary identifier)
+  uuid: string; // UUIDv4 (same as blogId)
   title: string;
   description: string;
   thumbnail: string;
   createdAt: Date;
   modifiedAt: Date;
-  slug: string;
+  slug: string; // URL-friendly slug for routing
 }
 
 /**
@@ -61,18 +65,35 @@ function convertTimestampToDate(data: BlogPostFirestoreData): BlogPostMetadata {
 }
 
 /**
+ * Generate UUIDv4
+ */
+export function generateUUID(): string {
+  // Generate UUIDv4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
  * Create or update a blog post in Firestore
+ * @param uuid - UUID to use as document ID (if updating, pass existing UUID)
+ * @param slug - URL-friendly slug
+ * @param data - Blog post data
+ * @returns The UUID used for the blog post
  */
 export async function saveBlogPostMetadata(
-  blogId: string,
+  uuid: string,
+  slug: string,
   data: {
     title: string;
     description: string;
     thumbnail: string;
   }
-): Promise<void> {
+): Promise<string> {
   const db = getFirebaseDb();
-  const blogRef = doc(db, BLOG_COLLECTION, blogId);
+  const blogRef = doc(db, BLOG_COLLECTION, uuid);
   
   // Check if document exists
   const existingDoc = await getDoc(blogRef);
@@ -84,13 +105,15 @@ export async function saveBlogPostMetadata(
       title: data.title,
       description: data.description,
       thumbnail: data.thumbnail,
+      slug: slug, // Update slug in case it changed
       modifiedAt: now,
     });
   } else {
-    // Create new document
+    // Create new document with UUID as document ID
     await setDoc(blogRef, {
-      blogId,
-      slug: blogId,
+      blogId: uuid,
+      uuid: uuid,
+      slug: slug,
       title: data.title,
       description: data.description,
       thumbnail: data.thumbnail,
@@ -98,19 +121,21 @@ export async function saveBlogPostMetadata(
       modifiedAt: now,
     });
   }
+  
+  return uuid;
 }
 
 /**
- * Get a blog post metadata from Firestore
+ * Get a blog post metadata from Firestore by UUID
  */
-export async function getBlogPostMetadata(blogId: string): Promise<BlogPostMetadata | null> {
+export async function getBlogPostMetadataByUUID(uuid: string): Promise<BlogPostMetadata | null> {
   try {
-    if (!blogId || typeof blogId !== 'string' || blogId.trim() === '') {
+    if (!uuid || typeof uuid !== 'string' || uuid.trim() === '') {
       return null;
     }
     
     const db = getFirebaseDb();
-    const blogRef = doc(db, BLOG_COLLECTION, blogId);
+    const blogRef = doc(db, BLOG_COLLECTION, uuid);
     const docSnap = await getDoc(blogRef);
     
     if (!docSnap.exists()) {
@@ -124,8 +149,54 @@ export async function getBlogPostMetadata(blogId: string): Promise<BlogPostMetad
     
     return convertTimestampToDate(data as BlogPostFirestoreData);
   } catch (error) {
-    console.error(`Error fetching blog metadata for ${blogId}:`, error);
+    console.error(`Error fetching blog metadata for UUID ${uuid}:`, error);
     return null;
+  }
+}
+
+/**
+ * Get a blog post metadata from Firestore by slug
+ */
+export async function getBlogPostMetadataBySlug(slug: string): Promise<BlogPostMetadata | null> {
+  try {
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return null;
+    }
+    
+    const db = getFirebaseDb();
+    const blogsRef = collection(db, BLOG_COLLECTION);
+    const q = query(blogsRef, where('slug', '==', slug), limit(1));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const docSnap = querySnapshot.docs[0];
+    const data = docSnap.data();
+    if (!data) {
+      return null;
+    }
+    
+    return convertTimestampToDate(data as BlogPostFirestoreData);
+  } catch (error) {
+    console.error(`Error fetching blog metadata for slug ${slug}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get a blog post metadata from Firestore by UUID or slug (for backward compatibility)
+ * Tries UUID first, then slug
+ */
+export async function getBlogPostMetadata(identifier: string): Promise<BlogPostMetadata | null> {
+  // Check if it looks like a UUID (contains hyphens and is 36 chars)
+  const isUUID = identifier.includes('-') && identifier.length === 36;
+  
+  if (isUUID) {
+    return getBlogPostMetadataByUUID(identifier);
+  } else {
+    return getBlogPostMetadataBySlug(identifier);
   }
 }
 
@@ -249,92 +320,127 @@ export async function deleteImageFromStorage(path: string): Promise<void> {
 
 /**
  * Generate a storage path for a blog thumbnail
+ * @param uuid - UUID of the blog post
+ * @param filename - Filename for the thumbnail
  */
-export function getBlogThumbnailPath(blogId: string, filename: string): string {
+export function getBlogThumbnailPath(uuid: string, filename: string): string {
   // Remove any path separators from filename for security
   const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  return `blog-thumbnails/${blogId}/${safeFilename}`;
+  return `blog-thumbnails/${uuid}/${safeFilename}`;
 }
 
 /**
  * Generate a storage path for a blog image asset
+ * @param uuid - UUID of the blog post
+ * @param filename - Filename for the image
  */
-export function getBlogImagePath(blogId: string, filename: string): string {
+export function getBlogImagePath(uuid: string, filename: string): string {
   // Remove any path separators from filename for security
   const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  return `blog-images/${blogId}/${safeFilename}`;
+  return `blog-images/${uuid}/${safeFilename}`;
 }
 
 /**
  * Generate a storage path for a blog Markdown file
+ * @param uuid - UUID of the blog post
  */
-export function getBlogMarkdownPath(blogId: string): string {
-  return `blog-markdown/${blogId}/${blogId}.md`;
+export function getBlogMarkdownPath(uuid: string): string {
+  return `blog-markdown/${uuid}/${uuid}.md`;
+}
+
+/**
+ * Delete all files in a Firebase Storage directory recursively
+ */
+async function deleteDirectoryContents(storage: ReturnType<typeof getFirebaseStorage>, directoryPath: string): Promise<void> {
+  try {
+    const directoryRef = ref(storage, directoryPath);
+    const listResult = await listAll(directoryRef);
+    
+    // Delete all files in the directory
+    const deletePromises = listResult.items.map((itemRef) => 
+      deleteObject(itemRef).catch((error) => {
+        console.warn(`Failed to delete file ${itemRef.fullPath}:`, error);
+        // Continue with other deletions even if one fails
+      })
+    );
+    
+    await Promise.all(deletePromises);
+    
+    // Recursively delete subdirectories
+    for (const prefixRef of listResult.prefixes) {
+      await deleteDirectoryContents(storage, prefixRef.fullPath);
+    }
+  } catch (error) {
+    // If directory doesn't exist, that's OK
+    if ((error as { code?: string })?.code !== 'storage/object-not-found') {
+      console.warn(`Error deleting directory ${directoryPath}:`, error);
+    }
+  }
 }
 
 /**
  * Delete a blog post from Firestore and Firebase Storage
+ * @param uuid - UUID of the blog post to delete
  */
-export async function deleteBlogPost(blogId: string): Promise<void> {
+export async function deleteBlogPost(uuid: string): Promise<void> {
   const db = getFirebaseDb();
   const storage = getFirebaseStorage();
   
   try {
-    // Get metadata first to access thumbnail info before deleting from Firestore
+    // Get metadata first to access info before deleting from Firestore
     let metadata: BlogPostMetadata | null = null;
     try {
-      metadata = await getBlogPostMetadata(blogId);
+      metadata = await getBlogPostMetadataByUUID(uuid);
     } catch (error) {
-      console.warn(`Could not fetch metadata for ${blogId}, proceeding with deletion:`, error);
+      console.warn(`Could not fetch metadata for ${uuid}, proceeding with deletion:`, error);
     }
     
     // Delete markdown file from Storage
     try {
-      const markdownPath = getBlogMarkdownPath(blogId);
+      const markdownPath = getBlogMarkdownPath(uuid);
       const markdownRef = ref(storage, markdownPath);
       await deleteObject(markdownRef);
     } catch (storageError) {
       // Log but don't fail if markdown doesn't exist
-      console.warn(`Markdown file not found for ${blogId}:`, storageError);
+      console.warn(`Markdown file not found for ${uuid}:`, storageError);
     }
     
-    // Delete thumbnail from Storage if metadata exists
-    if (metadata?.thumbnail) {
-      try {
-        // Try to extract path from URL or use default path
-        // If thumbnail is a Firebase Storage URL, we can't easily extract the path
-        // So we'll try the default thumbnail path
-        const thumbnailPath = getBlogThumbnailPath(blogId, 'thumbnail');
-        const thumbnailRef = ref(storage, thumbnailPath);
-        await deleteObject(thumbnailRef);
-      } catch (thumbnailError) {
-        // Log but don't fail if thumbnail doesn't exist
-        console.warn(`Thumbnail not found for ${blogId}:`, thumbnailError);
-      }
+    // Delete thumbnail directory and all its contents
+    try {
+      const thumbnailDirectoryPath = `blog-thumbnails/${uuid}`;
+      await deleteDirectoryContents(storage, thumbnailDirectoryPath);
+    } catch (thumbnailError) {
+      console.warn(`Error deleting thumbnails for ${uuid}:`, thumbnailError);
+    }
+    
+    // Delete all blog images from Storage
+    try {
+      const imagesDirectoryPath = `blog-images/${uuid}`;
+      await deleteDirectoryContents(storage, imagesDirectoryPath);
+    } catch (imagesError) {
+      console.warn(`Error deleting images for ${uuid}:`, imagesError);
     }
     
     // Delete from Firestore (do this last in case we need metadata above)
-    const blogRef = doc(db, BLOG_COLLECTION, blogId);
+    const blogRef = doc(db, BLOG_COLLECTION, uuid);
     await deleteDoc(blogRef);
-    
-    // Note: Firebase Storage doesn't support directory deletion directly
-    // Blog images in blog-images/{blogId}/ would need to be listed and deleted individually
-    // For now, we delete the markdown and thumbnail, and the main Firestore document
   } catch (error) {
-    console.error(`Error deleting blog post ${blogId}:`, error);
+    console.error(`Error deleting blog post ${uuid}:`, error);
     throw error;
   }
 }
 
 /**
  * Upload Markdown content to Firebase Storage
+ * @param uuid - UUID of the blog post
+ * @param markdownContent - Markdown content to upload
  */
 export async function uploadMarkdownToStorage(
-  blogId: string,
+  uuid: string,
   markdownContent: string
 ): Promise<string> {
   const storage = getFirebaseStorage();
-  const storagePath = getBlogMarkdownPath(blogId);
+  const storagePath = getBlogMarkdownPath(uuid);
   const storageRef = ref(storage, storagePath);
   
   // Convert string to Buffer
@@ -352,15 +458,16 @@ export async function uploadMarkdownToStorage(
 
 /**
  * Download Markdown content from Firebase Storage
+ * @param uuid - UUID of the blog post
  */
-export async function downloadMarkdownFromStorage(blogId: string): Promise<string> {
+export async function downloadMarkdownFromStorage(uuid: string): Promise<string> {
   try {
-    if (!blogId || typeof blogId !== 'string' || blogId.trim() === '') {
-      throw new Error('Invalid blog ID');
+    if (!uuid || typeof uuid !== 'string' || uuid.trim() === '') {
+      throw new Error('Invalid blog UUID');
     }
     
     const storage = getFirebaseStorage();
-    const storagePath = getBlogMarkdownPath(blogId);
+    const storagePath = getBlogMarkdownPath(uuid);
     const storageRef = ref(storage, storagePath);
     
     // Get download URL
@@ -396,9 +503,11 @@ export async function downloadMarkdownFromStorage(blogId: string): Promise<strin
 
 /**
  * Upload multiple images to Firebase Storage and return URL mappings
+ * @param uuid - UUID of the blog post
+ * @param images - Array of image data to upload
  */
 export async function uploadBlogImagesToStorage(
-  blogId: string,
+  uuid: string,
   images: Array<{ originalPath: string; savedPath: string; relativePath: string; buffer: Buffer; contentType: string }>
 ): Promise<Map<string, string>> {
   const urlMap = new Map<string, string>();
@@ -406,7 +515,7 @@ export async function uploadBlogImagesToStorage(
   for (const image of images) {
     try {
       const filename = image.originalPath.split('/').pop() || image.relativePath.split('/').pop() || 'image';
-      const storagePath = getBlogImagePath(blogId, filename);
+      const storagePath = getBlogImagePath(uuid, filename);
       const downloadURL = await uploadImageToStorage(
         image.buffer,
         storagePath,

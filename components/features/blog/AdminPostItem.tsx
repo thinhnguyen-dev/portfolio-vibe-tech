@@ -24,7 +24,7 @@ export function AdminPostItem({ post, onUpdate, uploading }: AdminPostItemProps)
       </div>
       <div className="flex flex-col gap-2">
         <Link
-          href={`/blog/${post.slug}`}
+          href={`/blog/${post.slug}?from=admin`}
           className="text-accent hover:underline text-sm"
         >
           View
