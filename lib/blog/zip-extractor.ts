@@ -15,6 +15,74 @@ export interface ExtractedBlogData {
 }
 
 /**
+ * Check if an entry should be skipped (system folders, empty folders, etc.)
+ */
+function shouldSkipEntry(entryName: string, isDirectory: boolean): boolean {
+  const normalizedName = entryName.replace(/\\/g, '/').toLowerCase();
+  
+  // Skip system-generated folders and files
+  const systemPatterns = [
+    '__macosx',
+    '.ds_store',
+    'thumbs.db',
+    'desktop.ini',
+    '.git',
+    '.svn',
+    '.idea',
+    '.vscode',
+    'node_modules',
+  ];
+  
+  // Check if entry name or any part of the path matches system patterns
+  const pathParts = normalizedName.split('/');
+  for (const part of pathParts) {
+    const cleanPart = part.trim();
+    if (!cleanPart) continue; // Skip empty parts
+    
+    for (const pattern of systemPatterns) {
+      if (cleanPart === pattern || cleanPart.startsWith(pattern + '/') || cleanPart.endsWith('/' + pattern)) {
+        return true;
+      }
+    }
+  }
+  
+  // Skip empty directories (directories with no content)
+  if (isDirectory) {
+    // We'll check if directory has any files later, but for now just skip directories
+    // that are clearly system folders
+    return false; // We'll handle empty directories differently
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a directory is empty (has no files, only subdirectories)
+ */
+function isDirectoryEmpty(entries: AdmZip.IZipEntry[], dirPath: string): boolean {
+  let normalizedDirPath = dirPath.replace(/\\/g, '/').toLowerCase();
+  if (!normalizedDirPath.endsWith('/')) {
+    normalizedDirPath = normalizedDirPath + '/';
+  }
+  
+  // Check if any file (not directory) exists in this directory
+  for (const entry of entries) {
+    if (entry.isDirectory) continue;
+    
+    const entryPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
+    if (entryPath.startsWith(normalizedDirPath)) {
+      // Check if it's a direct child (not in a subdirectory)
+      const relativePath = entryPath.substring(normalizedDirPath.length);
+      if (relativePath && !relativePath.includes('/')) {
+        return false; // Directory has at least one file
+      }
+    }
+  }
+  
+  return true; // Directory appears to be empty
+}
+
+/**
  * Securely extracts a ZIP file and returns blog data
  * @param zipBuffer - The ZIP file as a Buffer
  * @param outputDir - Directory to extract files to
@@ -29,9 +97,26 @@ export function extractBlogZip(
   maxTotalSize: number = 100 * 1024 * 1024 // 100MB
 ): ExtractedBlogData {
   const zip = new AdmZip(zipBuffer);
-  const entries = zip.getEntries();
+  const allEntries = zip.getEntries();
   
-  // Find markdown files
+  // Filter out system folders and files
+  const entries = allEntries.filter(entry => {
+    const entryName = entry.entryName.replace(/\\/g, '/');
+    
+    // Skip system-generated entries (both files and directories)
+    if (shouldSkipEntry(entryName, entry.isDirectory)) {
+      return false;
+    }
+    
+    // Skip empty directories (directories with no files)
+    if (entry.isDirectory) {
+      return !isDirectoryEmpty(allEntries, entryName);
+    }
+    
+    return true;
+  });
+  
+  // Find markdown files (after filtering)
   const markdownFiles = entries.filter(entry => 
     !entry.isDirectory && 
     entry.entryName.toLowerCase().endsWith('.md')
@@ -72,6 +157,8 @@ export function extractBlogZip(
   const baseDir = path.resolve(outputDir);
   
   for (const entry of entries) {
+    // Skip directories - we only process files
+    // Directory structure will be created automatically when extracting files
     if (entry.isDirectory) {
       continue;
     }
@@ -93,7 +180,7 @@ export function extractBlogZip(
       throw new Error(`Path traversal detected: ${entryName}`);
     }
 
-    // Create directory structure if needed
+    // Create directory structure if needed (only for files, not empty directories)
     const entryDir = path.dirname(fullPath);
     if (!fs.existsSync(entryDir)) {
       fs.mkdirSync(entryDir, { recursive: true });

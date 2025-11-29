@@ -345,3 +345,13 @@ samp {
 :root.light .katex * {
   color: var(--foreground) !important;
 }
+
+/* Shimmer animation for loading progress bars */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

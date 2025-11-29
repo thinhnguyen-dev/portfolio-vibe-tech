@@ -12,6 +12,7 @@ interface BlogListProps {
   loading?: boolean;
   loadingMessage?: string;
   onUpdate?: (slug: string, file: File) => void;
+  onDelete?: (slug: string) => void;
   uploading?: boolean;
   currentPage?: number;
   totalPages?: number;
@@ -47,6 +48,7 @@ export function BlogList({
   loading = false,
   loadingMessage = 'Loading...',
   onUpdate,
+  onDelete,
   uploading = false,
   currentPage = 1,
   totalPages = 1,
@@ -92,6 +94,7 @@ export function BlogList({
             <BlogCard
               post={post}
               onUpdate={onUpdate}
+              onDelete={onDelete}
               uploading={uploading}
             />
           </motion.div>

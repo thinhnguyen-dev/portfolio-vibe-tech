@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { downloadMarkdownFromStorage } from '@/lib/firebase/blog';
+import { downloadMarkdownFromStorage, getBlogPostMetadata } from '@/lib/firebase/blog';
 import { getCachedContent, saveToCache, isCacheValid } from '@/lib/blog/cache';
 
 export async function GET(
@@ -8,6 +8,23 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    
+    if (!slug || typeof slug !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid blog slug' },
+        { status: 400 }
+      );
+    }
+    
+    // First, check if blog exists in Firestore
+    const blogMetadata = await getBlogPostMetadata(slug);
+    if (!blogMetadata) {
+      // Blog doesn't exist in Firestore - return 404
+      return NextResponse.json(
+        { error: 'Blog post not found' },
+        { status: 404 }
+      );
+    }
     
     // Check cache first
     if (isCacheValid(slug)) {
@@ -21,18 +38,49 @@ export async function GET(
     }
     
     // Fetch from Firebase Storage
-    const content = await downloadMarkdownFromStorage(slug);
-    
-    // Save to cache
-    saveToCache(slug, content);
-    
-    return NextResponse.json({
-      content,
-      cached: false,
-    });
+    try {
+      const content = await downloadMarkdownFromStorage(slug);
+      
+      // Save to cache
+      saveToCache(slug, content);
+      
+      return NextResponse.json({
+        content,
+        cached: false,
+      });
+    } catch (storageError) {
+      // If storage fetch fails, it might be a 404 from Firebase
+      // Check if it's a "not found" type error
+      const errorMessage = storageError instanceof Error ? storageError.message : 'Failed to fetch blog content';
+      
+      // Firebase Storage throws errors for missing files
+      // If the metadata exists but content doesn't, still return 404
+      if (errorMessage.includes('not found') || errorMessage.includes('does not exist') || errorMessage.includes('404')) {
+        return NextResponse.json(
+          { error: 'Blog post not found' },
+          { status: 404 }
+        );
+      }
+      
+      // For other errors, return 500
+      console.error('Failed to fetch blog content from storage:', storageError);
+      return NextResponse.json(
+        { error: 'Failed to fetch blog content' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Failed to fetch blog content:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch blog content';
+    
+    // Check if it's a "not found" type error
+    if (errorMessage.includes('not found') || errorMessage.includes('does not exist') || errorMessage.includes('404')) {
+      return NextResponse.json(
+        { error: 'Blog post not found' },
+        { status: 404 }
+      );
+    }
+    
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
