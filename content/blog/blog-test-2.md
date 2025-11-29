@@ -697,7 +697,7 @@ Engage readers with formatted links and images:
 
 -  **Descriptive Link**: Try our [online Markdown editor](#).
 
--  **Image**: ![Markdown Logo](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Ff3963a89-80f2-4397-8945-ffe957d75454%2Fmarkdown.png?alt=media&token=dcd2ef2a-e9b1-4aad-9398-e01d7719093d)
+-  **Image**: ![Markdown Logo](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Fblog-test-2%2Fmarkdown.png?alt=media&token=63b083d9-9889-4311-adc5-29e43c07d6c5)
 
   
 

@@ -185,9 +185,9 @@ export function UploadForm({ onSubmit, uploading, error, success }: UploadFormPr
           {file && (
             <p className="mt-2 text-sm text-text-secondary">Selected: {file.name}</p>
           )}
-          <p className="mt-1 text-xs text-text-secondary">
+          {/* <p className="mt-1 text-xs text-text-secondary">
             ZIP files should contain one .md file and related images. Images will be automatically extracted and linked.
-          </p>
+          </p> */}
         </div>
 
         <div>

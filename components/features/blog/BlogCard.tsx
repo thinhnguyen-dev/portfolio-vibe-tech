@@ -5,22 +5,16 @@ import Image from 'next/image';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { Button } from '@/components/common/Button';
 import { MdOutlineReadMore } from 'react-icons/md';
-import { IoTrashOutline } from 'react-icons/io5';
+import { IoTrashOutline, IoPencilOutline } from 'react-icons/io5';
 
 interface BlogCardProps {
   post: BlogPostMetadata;
-  onUpdate?: (slug: string, file: File) => void;
+  onUpdate?: (post: BlogPostMetadata) => void;
   onDelete?: (slug: string) => void;
   uploading?: boolean;
 }
 
 export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCardProps) {
-  const handleUpdateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile?.name.endsWith('.md') && onUpdate) {
-      onUpdate(post.slug, selectedFile);
-    }
-  };
 
   return (
     <motion.div
@@ -58,22 +52,19 @@ export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCa
 
         {/* Buttons */}
         <div className="mt-auto flex gap-2 shrink-0">
-          <Button href={`/blog/${post.slug}`}>
+          <Button href={`/blog/${post.slug}${onUpdate || onDelete ? '?from=admin' : ''}`}>
             Read more <span className="text-accent"><MdOutlineReadMore size={20} /></span>
           </Button>
           {onUpdate && (
-            <label className="cursor-pointer">
-              <span className="inline-flex items-center gap-2.5 px-4 py-2 h-[37px] border border-text-secondary text-text-secondary hover:bg-text-secondary/10 transition-colors text-base leading-[21px] font-medium whitespace-nowrap">
-                Update
-              </span>
-              <input
-                type="file"
-                accept=".md"
-                onChange={handleUpdateFileChange}
-                className="hidden"
-                disabled={uploading}
-              />
-            </label>
+            <button
+              onClick={() => onUpdate(post)}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 px-4 py-2 h-[37px] border border-text-secondary text-text-secondary hover:bg-text-secondary/10 transition-colors text-base leading-[21px] font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Edit blog post"
+            >
+              Edit
+              <IoPencilOutline size={18} />
+            </button>
           )}
           {onDelete && (
             <button

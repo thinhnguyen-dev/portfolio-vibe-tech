@@ -4,4 +4,5 @@ export { BlogList } from './BlogList';
 export { AdminPostItem } from './AdminPostItem';
 export { AdminPostList } from './AdminPostList';
 export { UploadForm } from './UploadForm';
+export { UpdateModal } from './UpdateModal';
 

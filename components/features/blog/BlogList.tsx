@@ -11,7 +11,7 @@ interface BlogListProps {
   emptyMessage?: string;
   loading?: boolean;
   loadingMessage?: string;
-  onUpdate?: (slug: string, file: File) => void;
+  onUpdate?: (post: BlogPostMetadata) => void;
   onDelete?: (slug: string) => void;
   uploading?: boolean;
   currentPage?: number;

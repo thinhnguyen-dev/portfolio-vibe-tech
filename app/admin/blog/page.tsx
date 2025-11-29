@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import type { BlogPostMetadata as FirebaseBlogPostMetadata } from '@/lib/firebase/blog';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
-import { BlogLayout, UploadForm, BlogList } from '@/components/features/blog';
+import { BlogLayout, UploadForm, BlogList, UpdateModal } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 
@@ -26,7 +27,10 @@ export default function AdminBlogPage() {
   const [loading, setLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
   const [pendingDeleteSlug, setPendingDeleteSlug] = useState<string | null>(null);
+  const [pendingUpdatePost, setPendingUpdatePost] = useState<FirebaseBlogPostMetadata | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pendingUploadData, setPendingUploadData] = useState<{
     file: File;
@@ -111,14 +115,9 @@ export default function AdminBlogPage() {
       const xhr = new XMLHttpRequest();
       
       // Set up progress tracking
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100;
-          // Update progress in UploadForm if we can access it
-          // For now, we'll use a simulated progress for better UX
-          // Since we can't directly update UploadForm's state from here,
-          // we'll handle it in the UploadForm component itself
-        }
+      xhr.upload.addEventListener('progress', () => {
+        // Progress tracking can be implemented here if needed
+        // For now, we'll handle it in the UploadForm component itself
       });
 
       const response = await fetch('/api/blog/upload', {
@@ -149,28 +148,105 @@ export default function AdminBlogPage() {
     setShowPasswordModal(true);
   };
 
-  const handleUpdate = async (slug: string, file: File) => {
+  const handleUpdateClick = async (post: BlogPostMetadata) => {
+    // Fetch full Firebase metadata for the post via API
+    try {
+      const response = await fetch(`/api/blog/metadata/${post.slug}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Convert ISO strings back to Date objects to match FirebaseBlogPostMetadata type
+        const fullPost: FirebaseBlogPostMetadata = {
+          blogId: data.blogId,
+          uuid: data.uuid,
+          title: data.title,
+          description: data.description,
+          thumbnail: data.thumbnail,
+          slug: data.slug,
+          createdAt: new Date(data.createdAt),
+          modifiedAt: new Date(data.modifiedAt),
+        };
+        setPendingUpdatePost(fullPost);
+        // Show password modal first before showing update modal
+        setShowUpdatePasswordModal(true);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Could not load blog post details');
+      }
+    } catch {
+      setError('Failed to load blog post details');
+    }
+  };
+
+  const handleUpdatePasswordVerify = async (password: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/blog/verify-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+      const isValid = response.ok && data.success === true;
+      
+      // If password is valid, show update modal
+      if (isValid) {
+        setShowUpdatePasswordModal(false);
+        setShowUpdateModal(true);
+      }
+      
+      return isValid;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUpdate = async (data: {
+    title: string;
+    description: string;
+    image?: string;
+    thumbnailFile?: File;
+    zipFile?: File;
+  }) => {
+    if (!pendingUpdatePost) return;
+
     setUploading(true);
     setError(null);
     setSuccess(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('slug', slug);
+      formData.append('slug', pendingUpdatePost.slug);
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      
+      if (data.image) {
+        formData.append('image', data.image);
+      }
+      
+      if (data.thumbnailFile) {
+        formData.append('thumbnailFile', data.thumbnailFile);
+      }
+      
+      if (data.zipFile) {
+        formData.append('zipFile', data.zipFile);
+      }
 
       const response = await fetch('/api/blog/update', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (response.ok) {
-        setSuccess(data.message || 'Blog post updated successfully!');
+        setSuccess(responseData.message || 'Blog post updated successfully!');
+        setShowUpdateModal(false);
+        setPendingUpdatePost(null);
         await fetchPosts();
       } else {
-        setError(data.error || 'Failed to update file');
+        setError(responseData.error || 'Failed to update blog post');
       }
     } catch {
       setError('An error occurred while updating');
@@ -184,7 +260,24 @@ export default function AdminBlogPage() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeletePasswordVerify = async (password: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/blog/verify-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+      return response.ok && data.success === true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleDeleteWithPassword = async (password: string) => {
     if (!pendingDeleteSlug) return;
 
     setDeleting(true);
@@ -192,7 +285,7 @@ export default function AdminBlogPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/blog/delete?blogId=${pendingDeleteSlug}`, {
+      const response = await fetch(`/api/blog/delete?slug=${pendingDeleteSlug}&password=${encodeURIComponent(password)}`, {
         method: 'DELETE',
       });
 
@@ -205,13 +298,10 @@ export default function AdminBlogPage() {
         await fetchPosts();
       } else {
         setError(data.error || 'Failed to delete blog post');
-        setShowDeleteModal(false);
-        setPendingDeleteSlug(null);
+        // Don't close modal on error, let user try again
       }
     } catch {
       setError('An error occurred while deleting');
-      setShowDeleteModal(false);
-      setPendingDeleteSlug(null);
     } finally {
       setDeleting(false);
     }
@@ -258,7 +348,7 @@ export default function AdminBlogPage() {
         <h2 className="text-2xl font-bold text-foreground mb-6">Existing Blog Posts</h2>
         <BlogList
           posts={posts}
-          onUpdate={handleUpdate}
+          onUpdate={handleUpdateClick}
           onDelete={handleDeleteClick}
           uploading={uploading || deleting}
           loading={loading}
@@ -266,7 +356,7 @@ export default function AdminBlogPage() {
         />
       </motion.div>
 
-      {/* Password Modal */}
+      {/* Password Modal for Upload */}
       <PasswordModal
         isOpen={showPasswordModal}
         onClose={() => {
@@ -278,20 +368,61 @@ export default function AdminBlogPage() {
         message="Please enter the password to upload a blog post"
       />
 
+      {/* Password Modal for Update */}
+      <PasswordModal
+        isOpen={showUpdatePasswordModal}
+        onClose={() => {
+          setShowUpdatePasswordModal(false);
+          setPendingUpdatePost(null);
+        }}
+        onVerify={handleUpdatePasswordVerify}
+        title="Authentication Required"
+        message="Please enter the password to update this blog post"
+      />
+
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false);
           setPendingDeleteSlug(null);
+          setError(null);
         }}
-        onConfirm={handleDeleteConfirm}
+        onConfirm={async () => {
+          // This will be called after password verification in the modal
+          // The actual deletion happens in onPasswordVerify callback
+        }}
         title="Delete Blog Post"
-        message="Are you sure you want to delete this blog post? This action is irreversible and will permanently delete the post from Firestore and Firebase Storage."
+        message="Are you sure you want to delete this blog post? This action is irreversible and will permanently delete the post, markdown file, and all related images."
         confirmText="Delete"
         cancelText="Cancel"
         confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
         loading={deleting}
+        requirePassword={true}
+        onPasswordVerify={async (password: string) => {
+          const isValid = await handleDeletePasswordVerify(password);
+          if (isValid && pendingDeleteSlug) {
+            // Password is valid, proceed with deletion
+            await handleDeleteWithPassword(password);
+            return true;
+          }
+          return false;
+        }}
+        passwordError={error && (error.includes('password') || error.includes('Invalid')) ? error : null}
+      />
+
+      {/* Update Modal */}
+      <UpdateModal
+        isOpen={showUpdateModal}
+        onClose={() => {
+          setShowUpdateModal(false);
+          setPendingUpdatePost(null);
+          setError(null);
+        }}
+        onSubmit={handleUpdate}
+        post={pendingUpdatePost}
+        updating={uploading}
+        error={error}
       />
     </BlogLayout>
   );
