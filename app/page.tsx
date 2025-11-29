@@ -7,6 +7,7 @@ import { HeroLogo, DotsPattern, StatusBar, Quote } from '@/components/features/h
 import { Contact } from '@/components/features/contact';
 import { FaCode } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import { MdOutlineReadMore } from 'react-icons/md';
 
 // Define 3 sentences for the main heading
 const headingSentences = [
@@ -129,7 +130,7 @@ export default function Home() {
                   className="pt-2"
                 >
                   <Button onClick={() => router.push('/about')}>
-                    Read more <span className="text-accent"><FaCode size={20} /></span>
+                    Read more <span className="text-accent"><MdOutlineReadMore size={20} /></span>
                   </Button>
                 </motion.div>
               )}

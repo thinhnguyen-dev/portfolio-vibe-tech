@@ -11,7 +11,7 @@ dist
 build
 
 # Environment variables
-.env
+# Note: .env is NOT ignored so it can be copied to the container
 .env*.local
 .env.development
 .env.production

@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 /* Dark theme (default) */
 :root,
@@ -8,6 +9,10 @@
   --foreground: #FFFFFF;
   --accent: #C778DD;
   --text-secondary: #ABB2BF;
+  --article-bg: #25282d;
+  --code-bg: #1e2126;
+  --border-color: rgba(171, 178, 191, 0.1);
+  --placeholder-bg: #374151;
 }
 
 /* Light theme */
@@ -16,6 +21,10 @@
   --foreground: #282C33;
   --accent: #C778DD;
   --text-secondary: #6B7280;
+  --article-bg: #F9FAFB;
+  --code-bg: #F3F4F6;
+  --border-color: rgba(107, 114, 128, 0.2);
+  --placeholder-bg: #E5E7EB;
 }
 
 @theme {
@@ -23,6 +32,9 @@
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
   --color-text-secondary: var(--text-secondary);
+  --color-article-bg: var(--article-bg);
+  --color-code-bg: var(--code-bg);
+  --color-border: var(--border-color);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-fira-code: 'Fira Code', monospace;
@@ -44,4 +56,292 @@ kbd,
 samp {
   font-family: var(--font-fira-code), 'Fira Code', monospace;
   font-variant-ligatures: common-ligatures;
+}
+
+/* Remove bottom margin from paragraphs inside blockquotes */
+.markdown-content blockquote p {
+  margin-bottom: 0 !important;
+}
+
+/* Add small spacing between multiple paragraphs in blockquotes */
+.markdown-content blockquote p:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+/* Ensure anchor tags inside paragraphs are inline and don't take full width */
+.markdown-content p a {
+  display: inline;
+}
+
+/* Make multiple images display inline with wrapping */
+.markdown-content p:has(.inline-image + .inline-image),
+.markdown-content p:has(.inline-image:not(:only-child)) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+/* Single image in paragraph - keep block display */
+.markdown-content p:has(.inline-image:only-child) {
+  display: block;
+}
+
+.markdown-content .inline-image {
+  display: inline-block;
+  flex-shrink: 0;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  vertical-align: middle;
+}
+
+/* When multiple images, remove individual margins */
+.markdown-content p:has(.inline-image + .inline-image) .inline-image,
+.markdown-content p:has(.inline-image:not(:only-child)) .inline-image {
+  margin: 0;
+}
+
+/* Task list (checkbox list) styling */
+.markdown-content ul.contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.markdown-content ul.contains-task-list li.task-list-item {
+  margin-left: 0;
+  list-style: none;
+}
+
+/* Checkbox styling for task lists */
+.markdown-content input.task-list-item-checkbox,
+.markdown-content input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--text-secondary);
+  border-radius: 0.25rem;
+  background-color: var(--article-bg);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  transition: all 0.2s ease;
+}
+
+.markdown-content input[type="checkbox"]:hover {
+  border-color: var(--accent);
+  background-color: var(--code-bg);
+}
+
+.markdown-content input[type="checkbox"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(199, 120, 221, 0.2);
+}
+
+.markdown-content input[type="checkbox"]:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.markdown-content input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 0.375rem;
+  height: 0.625rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+}
+
+.markdown-content input[type="checkbox"]:checked:hover {
+  background-color: var(--accent);
+  opacity: 0.9;
+}
+
+/* Decorative underline for h1 and h2 headings */
+.markdown-content .heading-underline {
+  padding-bottom: 0.4rem;
+  border-bottom: 0.5px solid var(--accent);
+  transition: border-color 0.3s ease;
+}
+
+/* Footnote styling */
+.markdown-content .footnote-ref {
+  vertical-align: super;
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+.markdown-content .footnote-ref a {
+  text-decoration: none;
+  color: var(--accent);
+  font-weight: 600;
+  padding: 0 0.125rem;
+  border-radius: 0.125rem;
+  transition: background-color 0.2s ease;
+}
+
+.markdown-content .footnote-ref a:hover {
+  background-color: var(--code-bg);
+  text-decoration: underline;
+}
+
+.markdown-content .footnotes {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.markdown-content .footnote-def {
+  margin-left: 0 !important;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.markdown-content .footnote-def p {
+  margin: 0 !important;
+  display: inline;
+  position: relative;
+}
+
+.markdown-content .footnote-def p::marker,
+.markdown-content .footnote-def p::before {
+  content: attr(data-footnote-number);
+  font-weight: 600;
+  color: var(--accent);
+  margin-right: 0.5rem;
+}
+
+/* Ensure footnote lists don't show numbers */
+.markdown-content .footnotes-list {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+
+.markdown-content .footnotes-list li {
+  margin-left: 0 !important;
+}
+
+.markdown-content .footnote-def a,
+.markdown-content .footnote-def p a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-content .footnote-def a:hover,
+.markdown-content .footnote-def p a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content .footnotes-list {
+  list-style: none;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+/* KaTeX theme-aware styles */
+.katex {
+  color: var(--foreground);
+}
+
+.katex .base {
+  color: var(--foreground);
+}
+
+.katex .mord {
+  color: var(--foreground);
+}
+
+.katex .mrel {
+  color: var(--foreground);
+}
+
+.katex .mop {
+  color: var(--foreground);
+}
+
+.katex .mbin {
+  color: var(--foreground);
+}
+
+.katex .mopen {
+  color: var(--foreground);
+}
+
+.katex .mclose {
+  color: var(--foreground);
+}
+
+.katex .mpunct {
+  color: var(--foreground);
+}
+
+.katex .mord.mathnormal {
+  color: var(--foreground);
+}
+
+.katex .accent {
+  color: var(--accent);
+}
+
+.katex .munderover {
+  color: var(--foreground);
+}
+
+.katex .mtable {
+  color: var(--foreground);
+}
+
+.katex .mfrac {
+  color: var(--foreground);
+}
+
+.katex .sqrt {
+  color: var(--foreground);
+}
+
+.katex .overline {
+  border-top-color: var(--foreground);
+}
+
+.katex .underline {
+  border-bottom-color: var(--foreground);
+}
+
+.katex .boxpad {
+  padding: 0;
+}
+
+.katex-block {
+  display: block;
+  margin: 1rem 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex-inline {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* Ensure KaTeX renders properly in both themes */
+:root.dark .katex,
+:root.dark .katex * {
+  color: var(--foreground) !important;
+}
+
+:root.light .katex,
+:root.light .katex * {
+  color: var(--foreground) !important;
 }
