@@ -10,6 +10,7 @@ export interface BlogPostMetadata {
   date?: string;
   tags?: string[];
   image?: string;
+  blogId?: string; // Optional UUID for unique identification
 }
 
 export function getAllBlogSlugs(): string[] {

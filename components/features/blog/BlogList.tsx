@@ -90,7 +90,7 @@ export function BlogList({
         viewport={{ once: true, amount: 0.1 }}
       >
         {posts.map((post, index) => (
-          <motion.div key={post.slug} variants={cardVariants}>
+          <motion.div key={post.blogId || post.slug || `post-${index}`} variants={cardVariants}>
             <BlogCard
               post={post}
               onUpdate={onUpdate}

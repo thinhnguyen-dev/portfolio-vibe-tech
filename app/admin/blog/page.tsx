@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import type { BlogPostMetadata as FirebaseBlogPostMetadata } from '@/lib/firebase/blog';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { BlogLayout, UploadForm, BlogList, UpdateModal } from '@/components/features/blog';
@@ -22,7 +24,6 @@ const itemVariants = {
 export default function AdminBlogPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [posts, setPosts] = useState<BlogPostMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -55,7 +56,7 @@ export default function AdminBlogPage() {
         setPosts(Array.isArray(postsData) ? postsData : []);
       }
     } catch {
-      setError('Failed to load blog posts');
+      toast.error('Failed to load blog posts');
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,6 @@ export default function AdminBlogPage() {
   const performUpload = async (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File }) => {
     setUploading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const formData = new FormData();
@@ -128,15 +128,15 @@ export default function AdminBlogPage() {
       const responseData = await response.json();
 
       if (response.ok) {
-        setSuccess(responseData.message || 'Blog post uploaded successfully!');
+        toast.success(responseData.message || 'Blog post uploaded successfully!');
         await fetchPosts();
         // Reload the page after successful upload
         window.location.reload();
       } else {
-        setError(responseData.error || 'Failed to upload file');
+        toast.error(responseData.error || 'Failed to upload file');
       }
     } catch {
-      setError('An error occurred while uploading');
+      toast.error('An error occurred while uploading');
     } finally {
       setUploading(false);
     }
@@ -170,10 +170,10 @@ export default function AdminBlogPage() {
         setShowUpdatePasswordModal(true);
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Could not load blog post details');
+        toast.error(errorData.error || 'Could not load blog post details');
       }
     } catch {
-      setError('Failed to load blog post details');
+      toast.error('Failed to load blog post details');
     }
   };
 
@@ -213,7 +213,6 @@ export default function AdminBlogPage() {
 
     setUploading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const formData = new FormData();
@@ -241,15 +240,15 @@ export default function AdminBlogPage() {
       const responseData = await response.json();
 
       if (response.ok) {
-        setSuccess(responseData.message || 'Blog post updated successfully!');
+        toast.success(responseData.message || 'Blog post updated successfully!');
         setShowUpdateModal(false);
         setPendingUpdatePost(null);
         await fetchPosts();
       } else {
-        setError(responseData.error || 'Failed to update blog post');
+        toast.error(responseData.error || 'Failed to update blog post');
       }
     } catch {
-      setError('An error occurred while updating');
+      toast.error('An error occurred while updating');
     } finally {
       setUploading(false);
     }
@@ -282,7 +281,6 @@ export default function AdminBlogPage() {
 
     setDeleting(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const response = await fetch(`/api/blog/delete?slug=${pendingDeleteSlug}&password=${encodeURIComponent(password)}`, {
@@ -292,16 +290,20 @@ export default function AdminBlogPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(data.message || 'Blog post deleted successfully!');
+        toast.success(data.message || 'Blog post deleted successfully!');
         setShowDeleteModal(false);
         setPendingDeleteSlug(null);
         await fetchPosts();
       } else {
-        setError(data.error || 'Failed to delete blog post');
+        const errorMsg = data.error || 'Failed to delete blog post';
+        toast.error(errorMsg);
+        setError(errorMsg);
         // Don't close modal on error, let user try again
       }
     } catch {
-      setError('An error occurred while deleting');
+      const errorMsg = 'An error occurred while deleting';
+      toast.error(errorMsg);
+      setError(errorMsg);
     } finally {
       setDeleting(false);
     }
@@ -331,8 +333,6 @@ export default function AdminBlogPage() {
         <UploadForm
           onSubmit={handleUpload}
           uploading={uploading}
-          error={error}
-          success={success}
         />
       </motion.div>
 
@@ -423,6 +423,20 @@ export default function AdminBlogPage() {
         post={pendingUpdatePost}
         updating={uploading}
         error={error}
+      />
+
+      {/* Toast Container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
       />
     </BlogLayout>
   );

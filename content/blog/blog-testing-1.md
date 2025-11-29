@@ -1,950 +1,385 @@
+# Title Header (H1 header)
 
-# Markdown Editor Online - Free Live Preview 🚀
 
-  
+### Introduction (H3 header)
 
-Welcome to **MarkdownLivePreview.dev** - the best **online markdown editor** with live preview! **Edit markdown online** for free with our powerful **markdown editor online** featuring real-time preview, LaTeX support, and advanced tools. Perfect for developers, writers, and technical documentation. No signup required - start using our **free online markdown editor** instantly!
+This is some placeholder text to show examples of Markdown formatting.
+We have [a full article template](https://github.com/do-community/do-article-templates) you can use when writing a DigitalOcean article.
+Please refer to our style and formatting guidelines for more detailed explanations: <https://do.co/style>
 
-  
 
-[![Made by DigitalPro](https://img.shields.io/badge/Made%20by-DigitalPro-blue)](https://digitalpro.dev)
+## Prerequisites (H2 header)
 
-![Version](https://img.shields.io/badge/Version-1.0.2-blue)
+Before you begin this guide you'll need the following:
 
-  
+- Familiarity with [Markdown](https://daringfireball.net/projects/markdown/)
 
-## Why Choose Our Online Markdown Editor?
 
-  
+## Step 1 — Basic Markdown
 
-Our **markdown editor online** delivers the most powerful free editing experience available. Whether you need an **online markdown editor** with live preview, **markdown online editor** with file upload, or **markdown editor with preview** - our platform has everything you need:
+This is _italics_, this is **bold**, this is __underline__, and this is ~~strikethrough~~.
 
-  
+- This is a list item.
+- This list is unordered.
 
--  **🚀 Live Preview**: Real-time **markdown live preview** as you type
+1. This is a list item.
+2. This list is ordered.
 
--  **📁 File Upload**: Upload and edit existing .md files instantly
+> This is a quote.
+>
+> > This is a quote inside a quote.
+>
+> - This is a list in a quote.
+> - Another item in the quote list.
 
--  **📊 Table Generator**: Built-in [markdown table generator](/tools/table-generator) tool
+Here's how to include an image with alt text and a title:
 
--  **🔢 LaTeX Math**: Full LaTeX equation support with live rendering
+![Alt text for screen readers](https://assets.digitalocean.com/logos/DO_Logo_horizontal_blue.png "DigitalOcean Logo")
 
--  **💾 Auto-Save**: Your work saves automatically to browser storage
+_We also support some extra syntax for setting the width, height and alignment of images. You can provide pixels (`200`/`200px`), or a percentage (`50%`), for the width/height. The alignment can be either `left` or `right`, with images being centered by default. These settings are all optional._
 
--  **📱 Mobile Ready**: Perfect **web markdown editor** for all devices
+![](https://assets.digitalocean.com/public/mascot.png){ width=200 height=131 align=left }
 
--  **⚡ Instant Start**: No registration - start with our **free online markdown editor** now
-
-  
-
->  **Pro Tip**: Perfect for academic writing, technical documentation, and any content requiring **math in markdown**!
-
-  
-
-## Online Markdown Editor Features
-
-  
-
-Our **online markdown editor** is designed for maximum productivity and ease of use. Whether you're a developer, writer, or student, our **markdown editor online** provides everything you need:
-
-  
-
-**🎯 Perfect For:**
-
-- 📋 GitHub README files and documentation
-
-- 📝 Technical writing and blog posts
-
-- 📊 Data tables with the built-in table generator
-
-- 🎓 Academic papers with LaTeX equations
-
-- 💼 Professional documentation and reports
-
-- 🔗 Creating markdown links and formatting
-
-  
-
-**⚡ Key Features:**
-
--  **Real-time preview** - See changes instantly
-
--  **File upload support** - Edit existing markdown files
-
--  **Syntax highlighting** - Beautiful code formatting
-
--  **Export options** - Save as HTML, PDF, or download .md files
-
-  
-
->  **Tip**: Use our [tools suite](/tools) for specialized **markdown** tasks like table generation!
-
-  
-
-## Online Markdown Viewer & Editor
-
-  
-
-Need an **online markdown viewer**? Our **markdown online viewer** gives you instant preview of any markdown file. Upload, paste, or type directly into our **markdown editor with preview**:
-
-  
-
-**✨ Preview Support:**
-
-- ✅ GitHub-flavored markdown syntax
-
-- ✅ Tables with column alignment
-
-- ✅ Code syntax highlighting (20+ languages)
-
-- ✅ LaTeX math equations and formulas
-
-- ✅ Links, images, and media embedding
-
-- ✅ Task lists and checkboxes
-
-  
-
-**🚀 Popular Uses:**
-
-- Preview README.md files before GitHub commits
-
-- Edit and preview technical documentation
-
-- Create formatted reports and presentations
-
-- Write academic papers with mathematical notation
-
-- Build markdown content for websites and blogs
-
-  
-
->  **💡 Quick Start**: Just start typing in the left pane to see your **live markdown preview** on the right!
-
-  
+Use horizontal rules to break up long sections:
 
 ---
 
-  
+Rich transformations are also applied:
 
-## Start Editing Markdown Online Now!
+- On ellipsis: ...
+- On quote pairs: "sammy", 'test'
+- On dangling single quotes: it's
+- On en/em dashes: a -- b, a --- b
 
-  
+<!-- Comments will be removed from the output -->
 
-**Ready to try the best online markdown editor?** Clear this text and start typing your own markdown content. Here's a sample to get you started:
+| Tables | are   | also  | supported | and    | will   | overflow | cleanly | if     | needed |
+|--------|-------|-------|-----------|--------|--------|----------|---------|--------|--------|
+| col 1  | col 2 | col 3 | col 4     | col 5  | col 6  | col 7    | col 8   | col 9  | col 10 |
+| col 1  | col 2 | col 3 | col 4     | col 5  | col 6  | col 7    | col 8   | col 9  | col 10 |
+| col 1  | col 2 | col 3 | col 4     | col 5  | col 6  | col 7    | col 8   | col 9  | col 10 |
+| col 1  | col 2 | col 3 | col 4     | col 5  | col 6  | col 7    | col 8   | col 9  | col 10 |
+| col 1  | col 2 | col 3 | col 4     | col 5  | col 6  | col 7    | col 8   | col 9  | col 10 |
 
-  
 
-```markdown
+## Step 2 — Code
 
-# My Project Documentation
+This is `inline code`. This is a <^>variable<^>. This is an `in-line code <^>variable<^>`. You can also have [`code` in links](https://www.digitalocean.com).
 
-  
+Here's a configuration file with a label:
 
-Welcome to my project! This README was created using **MarkdownLivePreview.dev**.
-
-  
-
-## Quick Setup
-
-1. Clone the repository
-
-2. Install dependencies: `npm install`
-
-3. Start development: `npm run dev`
-
-  
-
-## Features
-
-- ✅ **Real-time preview** while you edit
-
-- ✅ **File upload support** for existing .md files
-
-- ✅ **LaTeX equations**: $E = mc^2$
-
-- ✅ **Table generator** for data formatting
-
-  
-
-| Feature | Status | Notes |
-
-|---------|--------|-------|
-
-| Editor | ✅ Live | Real-time preview |
-
-| Upload | ✅ Ready | Drag & drop files |
-
-| Export | ✅ Works | PDF, HTML, MD |
-
-  
-
-## Get Started
-
-Visit [MarkdownLivePreview.dev](/) to start editing!
-
-```
-
-  
-
->  **🎯 Pro Tip**: Replace this example content with your own markdown and watch the live preview update instantly!
-
-  
-
-## Master Markdown Syntax with Our Cheat Sheet
-
-  
-
-Learn **markdown** quickly with our comprehensive [markdown cheat sheet](/cheatsheet). Whether you're new to **markdown syntax** or need a quick reference, our **cheat sheet** covers everything from basic formatting to advanced features.
-
-  
-
-**Essential markdown syntax examples**:
-
--  **Headers**: `# Heading 1`, `## Heading 2`
-
--  **Bold in markdown**: `**bold text**` or `__bold text__`
-
--  **Links in markdown**: `[Link Text](URL)`
-
--  **Markdown tables**: `| Col 1 | Col 2 |`
-
--  **Line breaks in markdown**: Use two spaces at the end
-
--  **Code blocks**: ```language` for syntax highlighting
-
-  
-
-**Advanced markdown features**:
-
-- Task lists with checkboxes
-
--  **Markdown strikethrough**: `~~strikethrough~~`
-
-- Nested lists and formatting
-
--  **Markdown footnotes** for references
-
-  
-
->  **Bookmark this**: Our [markdown cheat sheet](/cheatsheet) is your complete **markdown guide**!
-
-  
-
-## Markdown Table Generator - Create Tables Effortlessly
-
-  
-
-Building **markdown tables** has never been easier! Our [markdown table generator](/tools/table-generator) helps you create professional **tables in markdown** format with live preview. Perfect for documentation, GitHub READMEs, and technical reports.
-
-  
-
-**Why use our markdown table generator?**
-
-- Visual table editor with instant **markdown** output
-
-- Support for complex **markdown table** formatting
-
-- Copy-paste functionality for quick workflow integration
-
--  **Markdown table syntax** validation and correction
-
-  
-
-### Example Markdown Table
-
-  
-
-| Feature | Description | Perfect For |
-
-|---------|-------------|-------------|
-
-|  **Markdown Editor**  | Real-time editing with preview | READMEs, documentation |
-
-|  **Table Generator**  | Visual table creation | Data presentation |
-
-|  **Markdown Viewer**  | File preview and validation | Content review |
-
-  
-
->  **Pro Tip**: Master **markdown table** formatting with our [cheat sheet](/cheatsheet) - includes advanced **table in markdown** techniques!
-
-  
-
-## Markdown to HTML Converter - Transform Your Content
-
-  
-
-Convert **markdown to HTML** effortlessly with our [markdown to HTML converter](/tools/html-converter). Essential for web developers, bloggers, and content creators who need to transform **markdown files** into web-ready HTML.
-
-  
-
-**Key features of our markdown converter**:
-
-- Preserves **markdown formatting** in HTML output
-
-- Supports **markdown tables**, code blocks, and links
-
--  **Markdown syntax** highlighting in HTML
-
-- One-click conversion from **markdown to HTML**
-
-  
-
-### Example: Markdown to HTML Conversion
-
-  
-
-**Markdown Input:**
-
-```markdown
-
-# Welcome to My Project
-
-This is a **bold** paragraph with a [link to our tools](/tools).
-
-  
-
-## Features
-
-- Easy **markdown** editing
-
--  **HTML** export functionality
-
-```
-
-  
-
-**HTML Output:**
-
-```html
-
-<h1>Welcome to My Project</h1>
-
-<p>This is a <strong>bold</strong> paragraph with a <a  href="/tools">link to our tools</a>.</p>
-
-<h2>Features</h2>
-
-<ul>
-
-<li>Easy <strong>markdown</strong> editing</li>
-
-<li><strong>HTML</strong> export functionality</li>
-
-</ul>
-
-```
-
-  
-
-## Convert RTF to Markdown
-
-  
-
-Migrate documents easily with our [RTF to Markdown converter](/tools/rtf-to-markdown). Convert RTF files into Markdown for seamless integration into your workflows.
-
-  
-
-## Generate Links with Markdown Link Generator
-
-  
-
-Format links effortlessly with our [Markdown link generator](/tools/link-generator). Ideal for creating clean, professional links in READMEs and documentation.
-
-  
-
-### Example Link
-
-  
-
--  **Generated Link**: [Explore Markdown](#)  *(created with our [link generator](/tools/link-generator))*
-
-  
-
-## Create Nested Lists with List Generator
-
-  
-
-Build ordered or nested lists with our [Markdown list generator](/tools/list-generator]. Perfect for organizing content in your Markdown files.
-
-  
-
-### Example List
-
-  
-
-- Task List
-
-- [ ] To-do item
-
--  [ ] Completed item
-
-  
-
->  **Tip**: Try our [list generator](/tools/list-generator) for complex lists!
-
-  
-
-## Markdown to PDF Converter - Professional Documents
-
-  
-
-Transform your **markdown** content into professional PDFs with our [markdown to PDF converter](/tools/markdown-to-pdf). Perfect for creating printable documentation, reports, and presentations from your **markdown files**.
-
-  
-
-**Benefits of markdown to PDF conversion**:
-
-- Preserve **markdown formatting** in PDF output
-
--  **Markdown tables** render perfectly in PDF format
-
-- Include code syntax highlighting in PDFs
-
-- Professional styling for business documents
-
--  **Convert markdown** content for offline sharing
-
-  
-
-### Popular Use Cases for Markdown PDF Export
-
-  
-
-- Convert **README.md** files for project presentations
-
-- Transform **markdown documentation** into client deliverables
-
-- Create printable versions of **markdown guides**
-
-- Archive **markdown content** in PDF format
-
-  
-
->  **Pro Tip**: Combine our [markdown formatter](/tools/markdown-formatter) with **PDF export** for perfectly styled documents!
-
-  
-
-## Export Markdown to Word
-
-  
-
-Convert your Markdown files to Word documents with our [Markdown to Word converter](/tools/markdown-to-word). Ideal for professional editing, collaboration, or sharing with non-technical teams.
-
-  
-
-### Example Use Case
-
-  
-
-Transform a Markdown technical guide into a Word document for stakeholder reviews or formal submissions.
-
-  
-
->  **Tip**: Try our [Markdown to Word converter](/tools/markdown-to-word) for easy collaboration!
-
-  
-
-## Format Markdown with Markdown Formatter
-
-  
-
-Ensure your Markdown follows best practices with our [Markdown formatter](/tools/markdown-formatter). Automatically fix syntax, align tables, and beautify code blocks.
-
-  
-
-### Example Formatting
-
-  
-
-**Before:**
-
-```markdown
-
-#Header
-
-- item1
-
-- item2
-
-```
-
-  
-
-**After:**
-
-```markdown
-
-# Header
-
-- Item 1
-
-- Item 2
-
-```
-
-  
-
->  **Tip**: Beautify your Markdown with our [Markdown formatter](/tools/markdown-formatter)!
-
-  
-
-## Generate a Table of Contents
- 
-Add a table of contents to your Markdown files with our [Markdown TOC generator](/tools/toc-generator]. Perfect for long documents or technical guides.
-
-  
-
-### Example TOC
-
-  
-
--  [Introduction](#introduction)
-
--  [Features](#features)
-
--  [Conclusion](#conclusion)
-
-  
-
->  **Tip**: Enhance navigation with our [Markdown TOC generator](/tools/toc-generator]!
-
-  
-
-## Showcase Code, Math, and More
-
-  
-
-### Code Syntax Highlighting
-
-  
-
-Display code in multiple languages with vibrant formatting:
-
-  
-
-```python
-
-def  fibonacci(n):
-
-"""Generate Fibonacci sequence."""
-
-a, b =  0,  1
-
-for _ in  range(n):
-
-yield a
-
-a, b = b, a + b
-
-```
-
-  
-
-```javascript
-
-async  function  fetchData(url)  {
-
-try  {
-
-const  response  =  await  fetch(url);
-
-return  await  response.json();
-
-}  catch (error) {
-
-console.error('Error:',  error);
-
+```nginx
+[label /etc/nginx/sites-available/default]
+server {
+    listen 80 <^>default_server<^>;
+    . . .
 }
-
-}
-
 ```
 
-  
+Examples can have line numbers, and every code block has a 'Copy' button to copy just the code:
 
->  **Tip**: See more code examples in our [example gallery](/examples).
-
-  
-
-### LaTeX Math Equations in Markdown
-
-  
-
-Create professional **math equations in markdown** with our **markdown latex** support. Perfect for academic papers, technical documentation, and scientific content. Our **markdown math editor** renders **LaTeX in markdown** using KaTeX for fast, beautiful mathematical notation.
-
-  
-
-**Popular LaTeX Math Features**:
-
--  **Greek letters in markdown**: $\alpha$, $\beta$, $\gamma$, $\pi$, $\sigma$, $\theta$
-
--  **Square root in markdown**: $\sqrt{x}$, $\sqrt[n]{x}$, $\sqrt{x^2  + y^2}$
-
--  **Math operators**: $\sum$, $\prod$, $\int$, $\lim$, $\frac{a}{b}$
-
--  **Mathematical relations**: $\subset$, $\approx$, $\equiv$, $\leq$, $\geq$
-
-  
-
-**Inline Math Examples**:
-
-Write **math in markdown**: $E = mc^2$, $\pi  \approx  3.14159$, $x = \frac{-b \pm  \sqrt{b^2  -  4ac}}{2a}$
-
-  
-
-**Display Math Equations**:
-
-$$
-
-\lim_{h \to  0}  \frac{f(x + h)  - f(x)}{h} = f'(x)
-
-$$
-
-  
-
-**Advanced Mathematical Notation**:
-
-$$
-
-\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
-
-$$
-
-  
-
->  **Learn More**: Master **how to write math in markdown** with LaTeX syntax - perfect for **markdown equations** in technical docs!
-
-  
-
-## Build Better Documentation
-
-  
-
-### Getting Started Guide
-
-  
-
-1.  **Edit Markdown Online**: Type in the editor and see a **live Markdown preview**.
-
-2.  **Use Tools**: Access our [tools suite](/tools) for tables, links, and more.
-
-3.  **Learn Syntax**: Master Markdown with our [cheat sheet](/cheatsheet).
-
-4.  **Explore Examples**: Get inspired by our [example gallery](/examples).
-
-  
-
-### API Documentation Example
-
-  
-
-Document APIs with clarity:
-
-  
-
-```typescript
-
-interface MarkdownEditor {
-
-/** Render Markdown to HTML */
-
-render(content:  string): Promise<string>;
-
-/** Save content to localStorage */
-
-save(content:  string):  void;
-
-}
-
+```line_numbers,js
+const test = 'hello';
+const other = 'world';
+console.log(test, other);
 ```
 
-  
+Here's output from a command with a secondary label:
 
-## Power User Tips
+```
+[secondary_label Output]
+Could not connect to Redis at 127.0.0.1:6379: Connection refused
+```
 
-  
+This is a non-root user command example:
 
-### Keyboard Shortcuts
+```command
+sudo apt-get update
+sudo apt-get install python3
+```
 
-  
+This is a root command example:
 
-Speed up your workflow:
+```super_user
+adduser sammy
+shutdown
+```
 
-  
+This is a custom prefix command example:
 
--  **Bold**: `Ctrl/Cmd + B`
+```custom_prefix(mysql>)
+FLUSH PRIVILEGES;
+SELECT * FROM articles;
+```
 
--  **Italic**: `Ctrl/Cmd + I`
+A custom prefix can contain a space by using `\s`:
 
--  **Links**: `Ctrl/Cmd + K`
+```custom_prefix((my-server)\smysql>)
+FLUSH PRIVILEGES;
+SELECT * FROM articles;
+```
 
--  **Code**: `Ctrl/Cmd + E`
+Indicate where commands are being run with environments:
 
-  
+```command
+[environment local]
+ssh root@server_ip
+```
 
->  **Tip**: Use our [link generator](/tools/link-generator) with shortcuts for fast linking!
+```command
+[environment second]
+echo "Secondary server"
+```
 
-  
+```command
+[environment third]
+echo "Tertiary server"
+```
 
-### Adding Links & Images
+```command
+[environment fourth]
+echo "Quaternary server"
+```
 
-  
+```command
+[environment fifth]
+echo "Quinary server"
+```
 
-Engage readers with formatted links and images:
+And all of these can be combined together, with a language for syntax highlighting as well as a line prefix (line numbers, command, custom prefix, etc.), and even an environment and label:
 
-  
+```line_numbers,html
+[environment second]
+[label index.html]
+<html>
+<body>
+<head>
+  <title><^>My Title<^></title>
+</head>
+<body>
+  . . .
+</body>
+</html>
+```
 
--  **Descriptive Link**: Try our [online Markdown editor](#).
 
--  **Image**: ![Markdown Logo](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Ff3963a89-80f2-4397-8945-ffe957d75454%2Fmarkdown.png?alt=media&token=dcd2ef2a-e9b1-4aad-9398-e01d7719093d)
+## Step 3 — Callouts
 
-  
+Here is a note, a warning, some info and a draft note:
 
-## Advanced Formatting Techniques
+<$>[note]
+**Note:** Use this for notes on a publication.
+<$>
 
-  
+<$>[warning]
+**Warning:** Use this to warn users.
+<$>
 
-<details>
+<$>[info]
+**Info:** Use this for product information.
+<$>
 
-<summary>Advanced Markdown Features</summary>
+<$>[draft]
+**Draft:** Use this for notes in a draft publication.
+<$>
 
-  
+A callout can also be given a label, which supports inline markdown as well:
 
-### Advanced LaTeX Math Examples
+<$>[note]
+[label Labels support _inline_ **markdown**]
+**Note:** Use this for notes on a publication.
+<$>
 
-  
 
-**Perfect for academic and scientific content**:
+You can also mention users by username:
 
-  
+@MattIPv4
 
-**Piecewise Functions** (**square root in markdown** and conditionals):
 
-$$
+## Step 4 — Layout
 
-f(x) = \begin{cases}
+Columns allow you to customise the layout of your Markdown:
 
-\sqrt{x} & \text{if } x \geq  0  \\
+[column
+Content inside a column is regular Markdown block content.
 
--\sqrt{|x|} & \text{if } x < 0
+> Any block or inline syntax can be used, including quotes.
+]
 
-\end{cases}
+[column
+Two or more columns adjacent to each other are needed to create a column layout.
 
-$$
+On desktop the columns will be evenly distributed in a single row, on tablets they will wrap naturally, and on mobile they will be in a single stack.
+]
 
-  
+[details Content can be hidden using `details`.
+Inside the details block you can use any block or inline syntax.
 
-**Greek Letters in Complex Equations** (**greek letters in markdown**):
+You could hide the solution to a problem:
+```js
+// Write a message to console
+console.log('Hello, world!');
+```
+]
 
-$$
+[details open You can also have the details block open by default.
+Pass `open` as the first argument to the summary section to do this.
 
-\phi(x) = \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{(x-\mu)^2}{2\sigma^2}}
+_You can also pass `closed`, though this is the same as not passing anything before the summary._
+]
 
-$$
+## Step 5 — Embeds
 
-  
+### YouTube
 
-**Vector Calculus** (advanced **mathematical notation**):
+Embedding a YouTube video (id, height, width):
 
-$$
+[youtube iom_nhYQIYk 225 400]
 
-\nabla  \times  \mathbf{F} = \begin{vmatrix}
+_Both the width and height are optional, with the defaults being 480 and 270 respectively._\
+_The width/height set are treated as maximums -- the video will scale down to fit the available space, maintaining the aspect ratio._
 
-\mathbf{i} & \mathbf{j} & \mathbf{k}  \\
+### Wistia
 
-\frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}  \\
+Embedding a Wistia video (id, height, width):
 
-F_x & F_y & F_z
+[wistia 7ld71zbvi6 225 400]
 
-\end{vmatrix}
+_As with the YouTube embed, both the width and height are optional and have the same defaults._\
+_The same behaviour applies to the width/height set, with responsive scaling._
 
-$$
+### Vimeo
 
-  
+Embedding a Vimeo video (url, height, width):
 
-**Matrix Equations** (**LaTeX in markdown**):
+[vimeo https://player.vimeo.com/video/329272793 225 400]
 
-$$
+_As with the YouTube embed, both the width and height are optional and have the same defaults._\
+_The same behaviour applies to the width/height set, with responsive scaling._
 
-\begin{bmatrix}
+### DNS
 
-\alpha & \beta  \\
+Embedding DNS record lookups (hostname, record types...):
 
-\gamma & \delta
+[dns digitalocean.com A AAAA]
 
-\end{bmatrix}
+### Glob
 
-\begin{bmatrix}
+Demonstrating how glob matching works (pattern, tests...):
 
-x \\ y
+[glob **/*.js a/b.js c/d.js e.jsx f.md]
 
-\end{bmatrix} =
+Glob embeds can also be written as multiple lines if needed:
 
-\begin{bmatrix}
+[glob **/*.js
+a/b.js
+c/d.js
+e.jsx
+f.md]
 
-\alpha x +  \beta y \\
+### CodePen
 
-\gamma x +  \delta y
+To provide code examples, you could embed a CodePen with a username and pen ID:
 
-\end{bmatrix}
+[codepen MattCowley vwPzeX]
 
-$$
+CodePen embeds can be customized with many flags after the username and ID:
 
-  
+- Pass any integer value to set a custom height for the embed (e.g. `[codepen MattCowley vwPzeX 512]`)
+- Pass `dark` to switch the embed to using dark mode (e.g. `[codepen MattCowley vwPzeX dark]`)
+- Pass `lazy` to enable lazy loading (click to run) for the embed (e.g. `[codepen MattCowley vwPzeX lazy]`)
+- Pass one of `html`, `css`, or `js` to change the default tab that is shown (e.g. `[codepen MattCowley vwPzeX css]`)
+- Pass `result` to show the result of the pen. This is the default tab, but can be combined with other tabs as well (e.g. `[codepen MattCowley vwPzeX html result]`)
+- Pass `editable` to enable the user to edit the embed (e.g. `[codepen chriscoyier Yxzjdz editable]`)\
+  _(Note: The embedded pen must be from a user with CodePen Pro for this to work)_
 
-</details>
+These flags can be combined in any order to create a custom CodePen embed.
+For example, `[codepen MattCowley vwPzeX dark css 384]` would create a dark mode embed that shows the CSS tab by default, with a height of 384px.
 
-  
+### Glitch
 
-### Footnotes
+Alternatively, you may want to embed a code example from Glitch with a project slug:
 
-  
+[glitch hello-digitalocean]
 
-Add references for clarity:
-  
+Similar to CodePen embeds, a set of optional flags can be passed as the slug to customize the embed:
 
->  **Tip**: Use footnotes to keep content clean.
+- Pass any integer value to set a custom height for the embed (e.g. `[glitch hello-digitalocean 512]`)
+- Pass `code` to show the project code by default in the embed (e.g. `[glitch hello-digitalocean code]`)
+- Pass `notree` to hide the file tree by default when showing the project code (e.g. `[glitch hello-digitalocean code notree]`)
+- Pass `path=...` to set a default file to show when showing the project code (e.g. `[glitch hello-digitalocean code path=src/app.jsx]`)
+- Pass `highlights=...` to set lines to highlight when showing the project code (e.g. `[glitch hello-digitalocean code path=src/app.jsx highlights=15,25]`)
+- Pass `noattr` to remove the author attribution from the embed (e.g. `[glitch hello-digitalocean noattr]`)
 
-  
+### Can I Use
 
-## Complete Markdown Tools Suite - Everything You Need
+If you're writing web-related content, you may want to embed a Can I Use table for a feature:
 
-  
+[caniuse css-grid]
 
-Enhance your **markdown** workflow with our comprehensive [tools suite](/tools). Each tool integrates seamlessly with our **markdown editor online** for maximum productivity:
+Some optional flags can also be set for this embed:
 
-  
+- Pass `past=...` to set how many previous browser versions are listed (0-5) (e.g. `[caniuse css-grid past=5]`)
+- Pass `future=...` to set how many future browser versions are listed (0-3) (e.g. `[caniuse css-grid future=3]`)
+- Pass `accessible` to switch to the accessible color scheme by default (e.g. `[caniuse css-grid accessible]`)
 
-**📊 Table & Structure Tools**:
+### Asciinema
 
--  **[Markdown Table Generator](/tools/table-generator)**: Create professional **markdown tables** with live preview
+Embedding a terminal recording from Asciinema (id, cols, rows):
 
--  **[TOC Generator](/tools/toc-generator)**: Generate **markdown table of contents** automatically
+[asciinema 239367 50 20]
 
--  **[List Generator](/tools/list-generator)**: Build ordered, unordered, and nested **lists in markdown**
+### Twitter
 
-  
+You can also embed a tweet from Twitter by passing the URL for the tweet:
 
-**🔄 Conversion & Export Tools**:
+[twitter https://twitter.com/MattIPv4/status/1576415168426573825]
 
--  **[Markdown to HTML Converter](/tools/html-converter)**: Transform **markdown to HTML** instantly
+Input may use either `twitter.com` or `x.com` domain
+Like a few other embeds, you can also pass optional flags to customize the embed:
 
--  **[Markdown to PDF Converter](/tools/markdown-to-pdf)**: Export **markdown to PDF** with formatting
+- Pass any integer value (between 250 and 550) to set a custom width for the embed (e.g. `[twitter https://twitter.com/MattIPv4/status/1576415168426573825 400]`)
+- Pass `light` or `dark` to switch the theme of the embed (e.g. `[twitter https://twitter.com/MattIPv4/status/1576415168426573825 dark]`)
+- Pass `left`, `center`, or `right` to align the embed (e.g. `[twitter https://twitter.com/MattIPv4/status/1576415168426573825 left]`)
 
--  **[Markdown to Word Converter](/tools/markdown-to-word)**: Convert **markdown to Word** documents
+### Instagram
 
--  **[RTF to Markdown Converter](/tools/rtf-to-markdown)**: **Convert to markdown** from RTF files
+You can also embed a post from Instagram by passing the URL for the post:
 
-  
+[instagram https://www.instagram.com/p/CkQuv3_LRgS]
 
-**✨ Formatting & Enhancement Tools**:
+Like a few other embeds, you can also pass optional flags to customize the embed:
 
--  **[Markdown Formatter](/tools/markdown-formatter)**: Beautify and standardize **markdown syntax**
+- Pass any integer value (between 326 and 550) to set a custom width for the embed (e.g. `[instagram https://www.instagram.com/p/CkQuv3_LRgS 400]`)
+- Add `left`, `center`, or `right` to set the alignment of the embed (default is `left`).
+- Pass `caption` to include caption under the post (e.g. `[instagram https://www.instagram.com/p/CkQuv3_LRgS caption]`)
 
--  **[Link Generator](/tools/link-generator)**: Create perfect **links in markdown** format
+### Slideshow
 
-  
+You can also embed Slideshow (url1, url2, ...urls, height, width):
 
----
+[slideshow https://assets.digitalocean.com/banners/python.png https://assets.digitalocean.com/banners/javascript.png https://assets.digitalocean.com/banners/nodejs.png]
 
-  
+_Both the width and height are optional, with the defaults being 480 and 270 respectively._
 
-## Ready to Edit Markdown Online?
+### Image compare
 
-  
+Compare two images side by side (url1, url2, height, width):
 
-**Join thousands of users** who trust **MarkdownLivePreview.dev** as their go-to **markdown editor online**. Our **free online markdown editor** combines powerful features with an intuitive interface - perfect for beginners and professionals alike.
+[compare https://assets.digitalocean.com/banners/python.png https://assets.digitalocean.com/banners/javascript.png]
 
-  
+_Both the width and height are optional, with the defaults being 480 and 270 respectively._
 
-**🎯 What makes us the best online markdown editor?**
+## Step 6 — Tutorials
 
-- ⚡ **Instant loading** - Start editing immediately, no signup required
+Certain features of our Markdown engine are designed specifically for our tutorial content-types.
+These may not be enabled in all contexts in the DigitalOcean community, but are enabled by default in the do-markdownit plugin.
 
-- 🔄 **Real-time sync** - **Live markdown preview** updates as you type
+[rsvp_button 1234 "Marketo RSVP buttons use the `rsvp_button` flag"]
 
-- 📱 **Universal access** - Works on any device with a web browser
+[terminal ubuntu:focal Terminal buttons are behind the `terminal` flag]
 
-- 🛠️ **Professional tools** - Built-in table generator, file upload, export options
 
-- 💾 **Auto-save** - Never lose your work with automatic browser storage
+## Conclusion
 
-  
-
-**🚀 Popular among:**
-
-- 👨‍💻 **Developers** using it for README files and documentation
-
-- ✍️ **Writers** creating blogs and articles with markdown
-
-- 🎓 **Students** working on academic papers with LaTeX equations
-
-- 💼 **Professionals** building reports and presentations
-
-  
-
->  **Ready to experience the best markdown editor online?** Start typing in the editor above or upload your existing .md files. It's completely free!
-
-  
-
----
-
-  
-
-<div  align="center">
-
-  
-
-### Complete Markdown Editor Online - 100% Free ✨
-
-  
-
-Begin creating professional documentation with **MarkdownLivePreview.dev** - the best **free online markdown editor**. Whether you need to **edit markdown online**, use our **markdown viewer**, or generate **markdown tables**, we have the tools you need.
-
-  
-
-**Get Started**:
-
-- 🚀 **[Edit Markdown Online](#)** - Start typing in the editor above
-
-- 📖 **[Markdown Cheat Sheet](/cheatsheet)** - Master **markdown syntax** quickly
-
-- 🛠️ **[Tools Suite](/tools)** - **Markdown table generator**, converters, and more
-
-- 💡 **[Examples Gallery](/examples)** - **Markdown** inspiration and templates
-
-  
-
-**Why choose our markdown editor online?**
-
-✅ **Free forever** - No signup required
-
-✅ **Live preview** - See results instantly
-
-✅ **All devices** - Works on desktop, tablet, and mobile
-
-✅ **Export options** - **Markdown to PDF**, HTML, Word, and more
-
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-<img  src="https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg"  alt="A mushroom-head robot drinking bubble tea"  width="100"  height="100">
-
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/8zm03EjUOVo?si=Ufg1nZkD8softLb3" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-  
-
+Please refer to our [writing guidelines](https://do.co/style) for more detailed explanations on our style and formatting.

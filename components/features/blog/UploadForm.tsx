@@ -5,11 +5,9 @@ import { useState } from 'react';
 interface UploadFormProps {
   onSubmit: (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File }) => Promise<void>;
   uploading: boolean;
-  error: string | null;
-  success: string | null;
 }
 
-export function UploadForm({ onSubmit, uploading, error, success }: UploadFormProps) {
+export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -320,18 +318,6 @@ export function UploadForm({ onSubmit, uploading, error, success }: UploadFormPr
             </>
           )}
         </div>
-
-        {error && (
-          <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="p-4 rounded-md bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200">
-            {success}
-          </div>
-        )}
 
         <button
           type="submit"
