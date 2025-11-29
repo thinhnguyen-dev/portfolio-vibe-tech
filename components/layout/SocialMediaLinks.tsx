@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { IoMdHome } from 'react-icons/io';
 import { IoMdPerson } from 'react-icons/io';
 import { FaMedal } from 'react-icons/fa';
+import { MdArticle } from 'react-icons/md';
 
 interface SocialIconProps {
   href: string;
@@ -35,6 +36,7 @@ export const SocialMediaLinks: React.FC = () => {
     { icon: IoMdHome, href: '/', label: 'home' },
     { icon: IoMdPerson, href: '/about', label: 'about' },
     { icon: FaMedal, href: '/achievements', label: 'achievements' },
+    { icon: MdArticle, href: '/blog', label: 'blog' },
   ];
 
   return (

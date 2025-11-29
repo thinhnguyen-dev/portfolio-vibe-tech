@@ -38,16 +38,18 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
         <TerminalProvider>
         <Background />
         <Header />
         <SocialMediaLinks />
-        {children}
+        <main className="flex-1 flex flex-col">
+          {children}
+        </main>
         <Footer />
         <GoToTop />
-          <TerminalWrapper />
+        <TerminalWrapper />
         </TerminalProvider>
       </body>
     </html>

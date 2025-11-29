@@ -10,6 +10,7 @@ import { useTerminal } from './TerminalContext';
 import { IoMdHome } from 'react-icons/io';
 import { FaCode, FaMedal } from 'react-icons/fa';
 import { IoMdPerson } from 'react-icons/io';
+import { MdArticle } from 'react-icons/md';
 
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,6 +21,7 @@ export const Header: React.FC = () => {
     { icon: <IoMdHome />, href: '/', label: 'home' },
     { icon: <IoMdPerson />, href: '/about', label: 'about' },
     { icon: <FaMedal />, href: '/achievements', label: 'achievements' },
+    { icon: <MdArticle />, href: '/blog', label: 'blog' },
   ];
 
   return (

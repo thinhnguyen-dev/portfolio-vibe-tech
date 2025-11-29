@@ -52,6 +52,26 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Copy .env file explicitly (needed for runtime environment variables)
+# The standalone build should include it, but we copy it explicitly to ensure availability
+COPY --from=builder --chown=nextjs:nodejs /app/.env ./.env
+
+# Create writable directories for runtime operations
+# These directories need write permissions for the nextjs user
+# Note: content directory may already exist from standalone build
+RUN mkdir -p /app/temp/blog-extracts && \
+    mkdir -p /app/content/blog && \
+    mkdir -p /app/public/blog-images && \
+    mkdir -p /app/.cache/blog && \
+    chown -R nextjs:nodejs /app/temp && \
+    chown -R nextjs:nodejs /app/content && \
+    chown -R nextjs:nodejs /app/public/blog-images && \
+    chown -R nextjs:nodejs /app/.cache && \
+    chmod -R 755 /app/temp && \
+    chmod -R 755 /app/content && \
+    chmod -R 755 /app/public/blog-images && \
+    chmod -R 755 /app/.cache
+
 # Switch to non-root user for security
 USER nextjs
 
@@ -61,9 +81,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Health check for container orchestration
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
 # Start the Next.js server from standalone output
+# The standalone build creates server.js in the root
 CMD ["node", "server.js"]
