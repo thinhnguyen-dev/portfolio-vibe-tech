@@ -438,3 +438,100 @@ samp {
 :root.light .Toastify__toast {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
+
+/* Code Block Styles - Theme-aware */
+.code-block-wrapper {
+  background: var(--code-bg) !important;
+}
+
+.code-block-wrapper pre {
+  background: transparent !important;
+  margin: 0 !important;
+}
+
+/* Override syntax highlighter colors to match design system */
+.code-block-wrapper code {
+  color: var(--foreground) !important;
+  background: transparent !important;
+}
+
+/* Dark theme syntax highlighting adjustments */
+:root.dark .code-block-wrapper .token.comment,
+:root.dark .code-block-wrapper .token.prolog,
+:root.dark .code-block-wrapper .token.doctype,
+:root.dark .code-block-wrapper .token.cdata {
+  color: var(--text-secondary) !important;
+  opacity: 0.7;
+}
+
+:root.dark .code-block-wrapper .token.keyword,
+:root.dark .code-block-wrapper .token.operator {
+  color: var(--accent) !important;
+}
+
+:root.dark .code-block-wrapper .token.string,
+:root.dark .code-block-wrapper .token.char {
+  color: #98c379 !important;
+}
+
+:root.dark .code-block-wrapper .token.number {
+  color: #d19a66 !important;
+}
+
+:root.dark .code-block-wrapper .token.function {
+  color: #61afef !important;
+}
+
+:root.dark .code-block-wrapper .token.variable {
+  color: #e06c75 !important;
+}
+
+:root.dark .code-block-wrapper .token.property {
+  color: #e5c07b !important;
+}
+
+/* Light theme syntax highlighting adjustments */
+:root.light .code-block-wrapper .token.comment,
+:root.light .code-block-wrapper .token.prolog,
+:root.light .code-block-wrapper .token.doctype,
+:root.light .code-block-wrapper .token.cdata {
+  color: var(--text-secondary) !important;
+  opacity: 0.7;
+}
+
+:root.light .code-block-wrapper .token.keyword,
+:root.light .code-block-wrapper .token.operator {
+  color: var(--accent) !important;
+}
+
+:root.light .code-block-wrapper .token.string,
+:root.light .code-block-wrapper .token.char {
+  color: #0d7377 !important;
+}
+
+:root.light .code-block-wrapper .token.number {
+  color: #b8860b !important;
+}
+
+:root.light .code-block-wrapper .token.function {
+  color: #0066cc !important;
+}
+
+:root.light .code-block-wrapper .token.variable {
+  color: #cc0000 !important;
+}
+
+:root.light .code-block-wrapper .token.property {
+  color: #8b6914 !important;
+}
+
+/* Ensure syntax highlighter respects theme variables */
+.code-block-wrapper pre[class*="language-"] {
+  background: transparent !important;
+  color: var(--foreground) !important;
+}
+
+.code-block-wrapper code[class*="language-"] {
+  background: transparent !important;
+  color: var(--foreground) !important;
+}

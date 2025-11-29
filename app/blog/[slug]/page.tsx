@@ -8,9 +8,11 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import React from 'react';
+import { ToastContainer } from 'react-toastify';
 import { Button } from '@/components/common/Button';
 import { MarkdownImage } from '@/components/blog/MarkdownImage';
 import { VideoEmbed } from '@/components/blog/VideoEmbed';
+import { CodeBlock } from '@/components/blog/CodeBlock';
 import { IoArrowBackCircle } from 'react-icons/io5';
 
 export default function BlogPostPage() {
@@ -261,26 +263,72 @@ export default function BlogPostPage() {
         {...props } 
       />
     ),
-    code: (props: React.HTMLAttributes<HTMLElement>) => (
-      <code 
-        className="px-1.5 py-0.5 rounded text-sm font-mono text-accent border transition-colors" 
-        style={{ 
-          backgroundColor: 'var(--code-bg)',
-          borderColor: 'var(--border-color)'
-        }}
-        {...props} 
-      />
-    ),
-    pre: (props: React.HTMLAttributes<HTMLPreElement>) => (
-      <pre 
-        className="rounded-md p-4 my-4 overflow-x-auto border transition-colors" 
-        style={{ 
-          backgroundColor: 'var(--code-bg)',
-          borderColor: 'var(--border-color)'
-        }}
-        {...props} 
-      />
-    ),
+    code: (props: React.HTMLAttributes<HTMLElement> & { className?: string; children?: React.ReactNode; inline?: boolean }) => {
+      const { className, children, inline, ...rest } = props;
+      const isInline = inline !== false && !className?.includes('language-');
+      
+      if (isInline) {
+        return (
+          <code 
+            className="px-1.5 py-0.5 rounded text-sm font-mono text-accent border transition-colors" 
+            style={{ 
+              backgroundColor: 'var(--code-bg)',
+              borderColor: 'var(--border-color)'
+            }}
+            {...rest}
+          >
+            {children}
+          </code>
+        );
+      }
+      
+      // Code block - extract language and content
+      const codeString = typeof children === 'string' 
+        ? children 
+        : React.Children.toArray(children).join('');
+      
+      return (
+        <CodeBlock className={className} inline={false}>
+          {codeString}
+        </CodeBlock>
+      );
+    },
+    pre: (props: React.HTMLAttributes<HTMLPreElement> & { children?: React.ReactNode }) => {
+      // react-markdown wraps code blocks in pre tags
+      // We need to extract the code element and handle it
+      const { children, ...rest } = props;
+      
+      // Check if children is a code element
+      if (React.isValidElement(children) && children.type === 'code') {
+        const codeProps = children.props as React.HTMLAttributes<HTMLElement> & { className?: string; children?: React.ReactNode };
+        const { className, children: codeChildren } = codeProps;
+        
+        // Extract language and content
+        const codeString = typeof codeChildren === 'string' 
+          ? codeChildren 
+          : React.Children.toArray(codeChildren).join('');
+        
+        return (
+          <CodeBlock className={className} inline={false}>
+            {codeString}
+          </CodeBlock>
+        );
+      }
+      
+      // Fallback for other pre elements
+      return (
+        <pre 
+          className="rounded-md my-8 overflow-x-auto border transition-colors" 
+          style={{ 
+            backgroundColor: 'var(--code-bg)',
+            borderColor: 'var(--border-color)'
+          }}
+          {...rest}
+        >
+          {children}
+        </pre>
+      );
+    },
     a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a className="text-accent hover:underline transition-colors" {...props} />,
     table: (props: React.HTMLAttributes<HTMLTableElement>) => (
       <table 
@@ -292,7 +340,7 @@ export default function BlogPostPage() {
     th: (props: React.HTMLAttributes<HTMLTableCellElement>) => (
       <th 
         className="border px-4 py-2 font-bold text-foreground transition-colors" 
-        style={{ 
+        style={{
           backgroundColor: 'var(--code-bg)',
           borderColor: 'var(--border-color)'
         }}
@@ -421,6 +469,20 @@ export default function BlogPostPage() {
           </ReactMarkdown>
         </article>
       )}
+
+      {/* Toast Container for code copy notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
     </div>
   );
 }
