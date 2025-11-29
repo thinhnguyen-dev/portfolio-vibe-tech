@@ -8,6 +8,7 @@ import {
   setDoc, 
   getDoc, 
   updateDoc, 
+  deleteDoc,
   getDocs, 
   query, 
   orderBy,
@@ -103,15 +104,29 @@ export async function saveBlogPostMetadata(
  * Get a blog post metadata from Firestore
  */
 export async function getBlogPostMetadata(blogId: string): Promise<BlogPostMetadata | null> {
-  const db = getFirebaseDb();
-  const blogRef = doc(db, BLOG_COLLECTION, blogId);
-  const docSnap = await getDoc(blogRef);
-  
-  if (!docSnap.exists()) {
+  try {
+    if (!blogId || typeof blogId !== 'string' || blogId.trim() === '') {
+      return null;
+    }
+    
+    const db = getFirebaseDb();
+    const blogRef = doc(db, BLOG_COLLECTION, blogId);
+    const docSnap = await getDoc(blogRef);
+    
+    if (!docSnap.exists()) {
+      return null;
+    }
+    
+    const data = docSnap.data();
+    if (!data) {
+      return null;
+    }
+    
+    return convertTimestampToDate(data as BlogPostFirestoreData);
+  } catch (error) {
+    console.error(`Error fetching blog metadata for ${blogId}:`, error);
     return null;
   }
-  
-  return convertTimestampToDate(docSnap.data() as BlogPostFirestoreData);
 }
 
 /**
@@ -254,7 +269,61 @@ export function getBlogImagePath(blogId: string, filename: string): string {
  * Generate a storage path for a blog Markdown file
  */
 export function getBlogMarkdownPath(blogId: string): string {
-  return `blog-content/${blogId}/${blogId}.md`;
+  return `blog-markdown/${blogId}/${blogId}.md`;
+}
+
+/**
+ * Delete a blog post from Firestore and Firebase Storage
+ */
+export async function deleteBlogPost(blogId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const storage = getFirebaseStorage();
+  
+  try {
+    // Get metadata first to access thumbnail info before deleting from Firestore
+    let metadata: BlogPostMetadata | null = null;
+    try {
+      metadata = await getBlogPostMetadata(blogId);
+    } catch (error) {
+      console.warn(`Could not fetch metadata for ${blogId}, proceeding with deletion:`, error);
+    }
+    
+    // Delete markdown file from Storage
+    try {
+      const markdownPath = getBlogMarkdownPath(blogId);
+      const markdownRef = ref(storage, markdownPath);
+      await deleteObject(markdownRef);
+    } catch (storageError) {
+      // Log but don't fail if markdown doesn't exist
+      console.warn(`Markdown file not found for ${blogId}:`, storageError);
+    }
+    
+    // Delete thumbnail from Storage if metadata exists
+    if (metadata?.thumbnail) {
+      try {
+        // Try to extract path from URL or use default path
+        // If thumbnail is a Firebase Storage URL, we can't easily extract the path
+        // So we'll try the default thumbnail path
+        const thumbnailPath = getBlogThumbnailPath(blogId, 'thumbnail');
+        const thumbnailRef = ref(storage, thumbnailPath);
+        await deleteObject(thumbnailRef);
+      } catch (thumbnailError) {
+        // Log but don't fail if thumbnail doesn't exist
+        console.warn(`Thumbnail not found for ${blogId}:`, thumbnailError);
+      }
+    }
+    
+    // Delete from Firestore (do this last in case we need metadata above)
+    const blogRef = doc(db, BLOG_COLLECTION, blogId);
+    await deleteDoc(blogRef);
+    
+    // Note: Firebase Storage doesn't support directory deletion directly
+    // Blog images in blog-images/{blogId}/ would need to be listed and deleted individually
+    // For now, we delete the markdown and thumbnail, and the main Firestore document
+  } catch (error) {
+    console.error(`Error deleting blog post ${blogId}:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -285,20 +354,44 @@ export async function uploadMarkdownToStorage(
  * Download Markdown content from Firebase Storage
  */
 export async function downloadMarkdownFromStorage(blogId: string): Promise<string> {
-  const storage = getFirebaseStorage();
-  const storagePath = getBlogMarkdownPath(blogId);
-  const storageRef = ref(storage, storagePath);
-  
-  // Get download URL
-  const downloadURL = await getDownloadURL(storageRef);
-  
-  // Fetch the content
-  const response = await fetch(downloadURL);
-  if (!response.ok) {
-    throw new Error(`Failed to download markdown: ${response.statusText}`);
+  try {
+    if (!blogId || typeof blogId !== 'string' || blogId.trim() === '') {
+      throw new Error('Invalid blog ID');
+    }
+    
+    const storage = getFirebaseStorage();
+    const storagePath = getBlogMarkdownPath(blogId);
+    const storageRef = ref(storage, storagePath);
+    
+    // Get download URL
+    const downloadURL = await getDownloadURL(storageRef);
+    
+    if (!downloadURL || typeof downloadURL !== 'string') {
+      throw new Error('Failed to get download URL');
+    }
+    
+    // Fetch the content
+    const response = await fetch(downloadURL);
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Blog post not found in storage');
+      }
+      throw new Error(`Failed to download markdown: ${response.status} ${response.statusText}`);
+    }
+    
+    const content = await response.text();
+    if (!content || typeof content !== 'string') {
+      throw new Error('Invalid content received');
+    }
+    
+    return content;
+  } catch (error) {
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to download markdown from storage');
   }
-  
-  return await response.text();
 }
 
 /**

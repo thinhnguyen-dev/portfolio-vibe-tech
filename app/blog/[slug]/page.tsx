@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -15,42 +15,66 @@ import { IoArrowBackCircle } from 'react-icons/io5';
 
 export default function BlogPostPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params?.slug as string;
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     const fetchContent = async () => {
-      if (!slug) return;
+      if (!slug || typeof slug !== 'string') {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
-        setError(null);
+        setNotFound(false);
         const response = await fetch(`/api/blog/content/${slug}`);
         
         if (!response.ok) {
           if (response.status === 404) {
-            setError('Blog post not found');
+            // Blog not found - redirect to 404 page
+            setNotFound(true);
+            setLoading(false);
+            router.replace('/not-found');
+            return;
           } else {
-            const data = await response.json();
-            setError(data.error || 'Failed to load blog post');
+            // Other errors - redirect to 404 as well
+            const data = await response.json().catch(() => ({}));
+            console.error('Failed to load blog post:', data.error || 'Unknown error');
+            setNotFound(true);
+            setLoading(false);
+            router.replace('/not-found');
+            return;
           }
-          return;
         }
         
         const data = await response.json();
-        setContent(data.content);
+        // Ensure content exists and is a string
+        if (data?.content && typeof data.content === 'string') {
+          setContent(data.content);
+        } else {
+          // Invalid content - treat as not found
+          setNotFound(true);
+          setLoading(false);
+          router.replace('/not-found');
+        }
       } catch (err) {
         console.error('Error fetching blog content:', err);
-        setError('An error occurred while loading the blog post');
+        // On error, redirect to 404
+        setNotFound(true);
+        setLoading(false);
+        router.replace('/not-found');
       } finally {
         setLoading(false);
       }
     };
 
     fetchContent();
-  }, [slug]);
+  }, [slug, router]);
 
   const markdownComponents = {
     h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h1 className="text-4xl font-bold mt-14 mb-7 text-foreground heading-underline" {...props} />,
@@ -336,6 +360,18 @@ export default function BlogPostPage() {
     ),
   };
 
+  // If not found, show loading while redirecting
+  if (notFound) {
+    return (
+      <div className="container mx-auto px-12 sm:px-14 md:px-16 max-w-7xl p-8">
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mb-4"></div>
+          <p className="text-text-secondary">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-12 sm:px-14 md:px-16 max-w-7xl p-8">
       <Button href="/blog" className="mb-4">
@@ -347,12 +383,6 @@ export default function BlogPostPage() {
         <div className="flex flex-col items-center justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mb-4"></div>
           <p className="text-text-secondary">Loading blog post...</p>
-        </div>
-      )}
-      
-      {error && (
-        <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 mb-4">
-          {error}
         </div>
       )}
       

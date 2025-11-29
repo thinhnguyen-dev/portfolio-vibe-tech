@@ -5,6 +5,7 @@ import { motion, useInView } from 'framer-motion';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { BlogLayout, UploadForm, BlogList } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
+import { ConfirmModal } from '@/components/common/ConfirmModal';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -24,6 +25,9 @@ export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPostMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteSlug, setPendingDeleteSlug] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [pendingUploadData, setPendingUploadData] = useState<{
     file: File;
     title?: string;
@@ -103,6 +107,20 @@ export default function AdminBlogPage() {
         formData.append('thumbnailFile', data.thumbnailFile);
       }
 
+      // Use XMLHttpRequest for progress tracking
+      const xhr = new XMLHttpRequest();
+      
+      // Set up progress tracking
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          // Update progress in UploadForm if we can access it
+          // For now, we'll use a simulated progress for better UX
+          // Since we can't directly update UploadForm's state from here,
+          // we'll handle it in the UploadForm component itself
+        }
+      });
+
       const response = await fetch('/api/blog/upload', {
         method: 'POST',
         body: formData,
@@ -161,6 +179,44 @@ export default function AdminBlogPage() {
     }
   };
 
+  const handleDeleteClick = (slug: string) => {
+    setPendingDeleteSlug(slug);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDeleteSlug) return;
+
+    setDeleting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/blog/delete?blogId=${pendingDeleteSlug}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(data.message || 'Blog post deleted successfully!');
+        setShowDeleteModal(false);
+        setPendingDeleteSlug(null);
+        await fetchPosts();
+      } else {
+        setError(data.error || 'Failed to delete blog post');
+        setShowDeleteModal(false);
+        setPendingDeleteSlug(null);
+      }
+    } catch {
+      setError('An error occurred while deleting');
+      setShowDeleteModal(false);
+      setPendingDeleteSlug(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const uploadRef = useRef<HTMLDivElement>(null);
   const postsRef = useRef<HTMLDivElement>(null);
   const uploadInView = useInView(uploadRef, { once: true, amount: 0.1 });
@@ -203,7 +259,8 @@ export default function AdminBlogPage() {
         <BlogList
           posts={posts}
           onUpdate={handleUpdate}
-          uploading={uploading}
+          onDelete={handleDeleteClick}
+          uploading={uploading || deleting}
           loading={loading}
           emptyMessage="No blog posts yet. Upload one above to get started!"
         />
@@ -219,6 +276,22 @@ export default function AdminBlogPage() {
         onVerify={handlePasswordVerify}
         title="Authentication Required"
         message="Please enter the password to upload a blog post"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPendingDeleteSlug(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Blog Post"
+        message="Are you sure you want to delete this blog post? This action is irreversible and will permanently delete the post from Firestore and Firebase Storage."
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+        loading={deleting}
       />
     </BlogLayout>
   );

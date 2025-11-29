@@ -151,7 +151,7 @@ export function UploadForm({ onSubmit, uploading, error, success }: UploadFormPr
       thumbnailFile,
     });
     
-    // Reset form
+    // Reset form on success
     setFile(null);
     setTitle('');
     setDescription('');
@@ -172,7 +172,7 @@ export function UploadForm({ onSubmit, uploading, error, success }: UploadFormPr
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="file-input" className="block text-sm font-medium mb-2 text-foreground">
-            Select Markdown File (.md) or ZIP Archive (.zip)
+            Select ZIP Archive (.zip) containing the Markdown File (.md) and related images 
           </label>
           <input
             id="file-input"
@@ -336,9 +336,16 @@ export function UploadForm({ onSubmit, uploading, error, success }: UploadFormPr
         <button
           type="submit"
           disabled={!file || uploading}
-          className="bg-accent text-foreground px-6 py-2 rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed"
+          className="bg-accent text-foreground px-6 py-2 rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
         >
-          {uploading ? 'Uploading...' : 'Upload'}
+          {uploading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground"></div>
+              <span>Uploading...</span>
+            </>
+          ) : (
+            'Upload'
+          )}
         </button>
       </form>
     </div>

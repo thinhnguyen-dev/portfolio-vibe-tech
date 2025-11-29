@@ -5,14 +5,16 @@ import Image from 'next/image';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { Button } from '@/components/common/Button';
 import { MdOutlineReadMore } from 'react-icons/md';
+import { IoTrashOutline } from 'react-icons/io5';
 
 interface BlogCardProps {
   post: BlogPostMetadata;
   onUpdate?: (slug: string, file: File) => void;
+  onDelete?: (slug: string) => void;
   uploading?: boolean;
 }
 
-export function BlogCard({ post, onUpdate, uploading = false }: BlogCardProps) {
+export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCardProps) {
   const handleUpdateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile?.name.endsWith('.md') && onUpdate) {
@@ -72,6 +74,16 @@ export function BlogCard({ post, onUpdate, uploading = false }: BlogCardProps) {
                 disabled={uploading}
               />
             </label>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(post.slug)}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 px-4 py-2 h-[37px] border border-red-500/50 text-red-500 hover:bg-red-500/10 transition-colors text-base leading-[21px] font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Delete blog post"
+            >
+              <IoTrashOutline size={18} />
+            </button>
           )}
         </div>
       </div>
