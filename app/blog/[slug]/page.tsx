@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -14,6 +14,7 @@ import { MarkdownImage } from '@/components/blog/MarkdownImage';
 import { VideoEmbed } from '@/components/blog/VideoEmbed';
 import { CodeBlock } from '@/components/blog/CodeBlock';
 import { TableOfContents } from '@/components/blog/TableOfContents';
+import { Preview } from '@/components/blog/Preview';
 import { IoArrowBackCircle } from 'react-icons/io5';
 import { extractTextFromReactChildren, HeadingIdGenerator } from '@/lib/blog/id-utils';
 
@@ -102,6 +103,19 @@ export default function BlogPostPage() {
   // Reset ID generator when content changes
   useEffect(() => {
     idGeneratorRef.current.reset();
+  }, [content]);
+
+  // Process content to replace {%preview URL %} with custom HTML
+  const processedContent = useMemo(() => {
+    if (!content) return content;
+    
+    // Match {%preview URL %} pattern
+    const previewRegex = /\{%preview\s+([^\s}]+)\s*%\}/g;
+    
+    return content.replace(previewRegex, (match, url) => {
+      // Create a custom HTML element that we can handle in the markdown renderer
+      return `<div data-preview-url="${url.replace(/"/g, '&quot;')}"></div>`;
+    });
   }, [content]);
 
   const markdownComponents = {
@@ -470,6 +484,19 @@ export default function BlogPostPage() {
         {...props} 
       />
     ),
+    div: (props: React.HTMLAttributes<HTMLDivElement>) => {
+      // Check for data-preview-url attribute (React passes data attributes through)
+      const propsWithData = props as { 'data-preview-url'?: string } & React.HTMLAttributes<HTMLDivElement>;
+      const previewUrl = propsWithData['data-preview-url'];
+      
+      if (previewUrl) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { 'data-preview-url': _, ...rest } = propsWithData;
+        return <Preview url={previewUrl} {...rest} />;
+      }
+      
+      return <div {...props} />;
+    },
   };
 
   // If not found, show loading while redirecting
@@ -513,7 +540,7 @@ export default function BlogPostPage() {
               rehypePlugins={[rehypeRaw, rehypeKatex]}
               components={markdownComponents}
             >
-              {content}
+              {processedContent || content}
             </ReactMarkdown>
           </article>
 

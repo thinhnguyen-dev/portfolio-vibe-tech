@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { IoListOutline, IoCloseOutline } from 'react-icons/io5';
+import { IoListOutline, IoCloseOutline, IoChevronDownOutline, IoChevronUpOutline } from 'react-icons/io5';
 import { extractTextFromMarkdown, extractHeadersFromMarkdown } from '@/lib/blog/id-utils';
 
 interface TocItem {
@@ -18,6 +18,7 @@ interface TableOfContentsProps {
 export function TableOfContents({ content }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Extract headers from markdown content using useMemo
@@ -169,6 +170,11 @@ export function TableOfContents({ content }: TableOfContentsProps) {
     return null;
   }
 
+  // Filter items based on collapsed state
+  const visibleItems = isCollapsed 
+    ? tocItems.filter(item => item.level === 1)
+    : tocItems;
+
   const tocContent = (
     <div
       className="border rounded-2xl p-4 transition-colors toc-container"
@@ -182,7 +188,33 @@ export function TableOfContents({ content }: TableOfContentsProps) {
         style={{ color: 'var(--foreground)' }}
       >
         <div className='flex flex-col w-full gap-1'>
-            <span className='w-full text-lg font-bold'>Table of Contents</span>
+            <div className="flex items-center justify-between w-full">
+              <span className='text-lg font-bold'>Table of Contents</span>
+              {/* Collapse/Expand button */}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1.5 rounded transition-colors flex items-center justify-center group"
+                style={{
+                  color: 'var(--text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--code-bg)';
+                  e.currentTarget.style.color = 'var(--foreground)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+                aria-label={isCollapsed ? 'Expand table of contents' : 'Collapse table of contents'}
+                title={isCollapsed ? 'Expand to show all headings' : 'Collapse to show only H1 headings'}
+              >
+                {isCollapsed ? (
+                  <IoChevronDownOutline size={18} />
+                ) : (
+                  <IoChevronUpOutline size={18} />
+                )}
+              </button>
+            </div>
             <div className="w-full border-accent border-b"></div>
         </div>
         {/* Mobile close button */}
@@ -199,7 +231,7 @@ export function TableOfContents({ content }: TableOfContentsProps) {
         </button>
       </h2>
       <nav className="space-y-">
-        {tocItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = activeId === item.id;
           const indentClass =
             item.level === 1
