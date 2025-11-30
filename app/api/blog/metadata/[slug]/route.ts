@@ -34,6 +34,7 @@ export async function GET(
       slug: blogMetadata.slug,
       createdAt: blogMetadata.createdAt.toISOString(),
       modifiedAt: blogMetadata.modifiedAt.toISOString(),
+      category: blogMetadata.category,
     });
   } catch (error) {
     console.error('Failed to fetch blog metadata:', error);

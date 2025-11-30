@@ -11,6 +11,7 @@ export interface BlogPostMetadata {
   tags?: string[];
   image?: string;
   blogId?: string; // Optional UUID for unique identification
+  category?: string; // Optional category for grouping blog posts
 }
 
 export function getAllBlogSlugs(): string[] {
@@ -47,6 +48,7 @@ export function getBlogPostMetadata(slug: string): BlogPostMetadata {
   let date: string | undefined;
   let tags: string[] | undefined;
   let image: string | undefined;
+  let category: string | undefined;
   
   if (frontmatterMatch) {
     const frontmatter = frontmatterMatch[1];
@@ -76,6 +78,11 @@ export function getBlogPostMetadata(slug: string): BlogPostMetadata {
     const imageMatch = frontmatter.match(/image:\s*(.+)/);
     if (imageMatch) {
       image = imageMatch[1].trim();
+    }
+    
+    const categoryMatch = frontmatter.match(/category:\s*(.+)/);
+    if (categoryMatch) {
+      category = categoryMatch[1].trim();
     }
   }
   
@@ -109,6 +116,7 @@ export function getBlogPostMetadata(slug: string): BlogPostMetadata {
     date,
     tags,
     image: image || '/default_blog_img.png',
+    category,
   };
 }
 

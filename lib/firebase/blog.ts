@@ -39,6 +39,7 @@ export interface BlogPostFirestoreData {
   createdAt: Timestamp;
   modifiedAt: Timestamp;
   slug: string; // URL-friendly slug for routing
+  category?: string; // Optional category for grouping blog posts
 }
 
 // Convert Firestore data to a more usable format
@@ -51,6 +52,7 @@ export interface BlogPostMetadata {
   createdAt: Date;
   modifiedAt: Date;
   slug: string; // URL-friendly slug for routing
+  category?: string; // Optional category for grouping blog posts
 }
 
 /**
@@ -90,6 +92,7 @@ export async function saveBlogPostMetadata(
     title: string;
     description: string;
     thumbnail: string;
+    category?: string;
   }
 ): Promise<string> {
   const db = getFirebaseDb();
@@ -101,13 +104,18 @@ export async function saveBlogPostMetadata(
   
   if (existingDoc.exists()) {
     // Update existing document
-    await updateDoc(blogRef, {
+    const updateData: any = {
       title: data.title,
       description: data.description,
       thumbnail: data.thumbnail,
       slug: slug, // Update slug in case it changed
       modifiedAt: now,
-    });
+    };
+    // Include category if provided
+    if (data.category !== undefined) {
+      updateData.category = data.category || null;
+    }
+    await updateDoc(blogRef, updateData);
   } else {
     // Create new document with UUID as document ID
     await setDoc(blogRef, {
@@ -117,6 +125,7 @@ export async function saveBlogPostMetadata(
       title: data.title,
       description: data.description,
       thumbnail: data.thumbnail,
+      category: data.category || null,
       createdAt: now,
       modifiedAt: now,
     });
