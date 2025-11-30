@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       date: post.createdAt.toISOString().split('T')[0],
       image: post.thumbnail,
       blogId: post.blogId, // Include UUID for unique key
+      category: post.category || 'Uncategorized', // Default to 'Uncategorized' if no category
     }));
     
     return NextResponse.json({

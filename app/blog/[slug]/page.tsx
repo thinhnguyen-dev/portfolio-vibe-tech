@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,7 +13,9 @@ import { Button } from '@/components/common/Button';
 import { MarkdownImage } from '@/components/blog/MarkdownImage';
 import { VideoEmbed } from '@/components/blog/VideoEmbed';
 import { CodeBlock } from '@/components/blog/CodeBlock';
+import { TableOfContents } from '@/components/blog/TableOfContents';
 import { IoArrowBackCircle } from 'react-icons/io5';
+import { extractTextFromReactChildren, HeadingIdGenerator } from '@/lib/blog/id-utils';
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -24,6 +26,7 @@ export default function BlogPostPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const idGeneratorRef = useRef<HeadingIdGenerator>(new HeadingIdGenerator());
 
   useEffect(() => {
     // Check if we're in admin mode by checking query params or referrer
@@ -96,10 +99,37 @@ export default function BlogPostPage() {
     fetchContent();
   }, [slug, router]);
 
+  // Reset ID generator when content changes
+  useEffect(() => {
+    idGeneratorRef.current.reset();
+  }, [content]);
+
   const markdownComponents = {
-    h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h1 className="text-4xl font-bold mt-14 mb-7 text-foreground heading-underline" {...props} />,
-    h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h2 className="text-3xl font-bold mt-10 mb-5 text-foreground heading-underline" {...props} />,
-    h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className="text-xl font-bold mt-8 mb-4 text-foreground" {...props} />,
+    h1: (props: React.HTMLAttributes<HTMLHeadingElement> & { children?: React.ReactNode }) => {
+      const { children, ...rest } = props;
+      const text = extractTextFromReactChildren(children);
+      // const id = idGeneratorRef.current.generate(text);
+
+      return <h1 id={text + '-1'} className="text-2xl sm:text-3xl md:text-4xl font-bold mt-8 sm:mt-10 md:mt-14 mb-4 sm:mb-5 md:mb-7 text-foreground heading-underline scroll-mt-20 sm:scroll-mt-24 heading-glow" {...rest}>
+        <span className="text-accent text-2xl sm:text-3xl md:text-4xl leading-tight sm:leading-[38px] md:leading-[42px] font-extrabold w-[16px] sm:w-[18px] md:w-[20px] mr-1 sm:mr-2">#</span>{children}
+      </h1>;
+    },
+    h2: (props: React.HTMLAttributes<HTMLHeadingElement> & { children?: React.ReactNode }) => {
+      const { children, ...rest } = props;
+      const text = extractTextFromReactChildren(children);
+      // const id = idGeneratorRef.current.generate(text);
+
+      return <h2 id={text + '-2'} className="text-xl sm:text-2xl md:text-3xl font-bold mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 text-foreground heading-underline scroll-mt-20 sm:scroll-mt-24 heading-glow" {...rest}>
+        <span className="text-accent text-xl sm:text-2xl md:text-3xl leading-tight sm:leading-[32px] md:leading-[38px] font-extrabold w-[16px] sm:w-[18px] md:w-[20px] mr-1 sm:mr-2">#</span>
+        {children}
+      </h2>;
+    },
+    h3: (props: React.HTMLAttributes<HTMLHeadingElement> & { children?: React.ReactNode }) => {
+      const { children, ...rest } = props;
+      const text = extractTextFromReactChildren(children);
+      // const id = idGeneratorRef.current.generate(text);
+      return <h3 id={text + '-3'} className="text-lg sm:text-xl font-bold mt-5 sm:mt-6 md:mt-8 mb-2 sm:mb-3 md:mb-4 text-foreground scroll-mt-20 sm:scroll-mt-24" {...rest}>{children}</h3>;
+    },
     h4: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h4 className="text-lg font-bold mt-6 mb-3 text-foreground" {...props} />,
     h5: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h5 className="text-base font-bold mt-3 mb-2 text-foreground" {...props} />,
     h6: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h6 className="text-sm font-bold mt-3 mb-2 text-foreground" {...props} />,
@@ -130,7 +160,7 @@ export default function BlogPostPage() {
           className={
             isTaskList
               ? "mb-4 space-y-2 text-foreground contains-task-list"
-              : "list-disc list-outside mb-4 space-y-2 text-foreground pl-6"
+              : "list-disc list-outside mb-4 space-y-2 text-foreground pl-4 sm:pl-6"
           } 
           {...rest}
         />
@@ -169,7 +199,7 @@ export default function BlogPostPage() {
         );
       }
       
-      return <ol className="list-decimal list-outside mb-4 space-y-2 text-foreground pl-6" {...rest}>{children}</ol>;
+      return <ol className="list-decimal list-outside mb-4 space-y-2 text-foreground pl-4 sm:pl-6" {...rest}>{children}</ol>;
     },
     li: (props: React.HTMLAttributes<HTMLLIElement> & { children?: React.ReactNode; className?: string; id?: string }) => {
       const { children, className, id, ...rest } = props;
@@ -259,7 +289,7 @@ export default function BlogPostPage() {
     },
     blockquote: (props: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) => (
       <blockquote 
-        className="border-l-4 border-accent pl-4 mb-6 italic text-text-secondary rounded-r-md transition-colors" 
+        className="border-l-4 sm:border-l-6 outline-1 border-accent pl-3 sm:pl-4 mb-4 sm:mb-6 italic text-text-secondary rounded-r-md transition-colors text-sm sm:text-base" 
         {...props } 
       />
     ),
@@ -329,17 +359,33 @@ export default function BlogPostPage() {
         </pre>
       );
     },
-    a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a className="text-accent hover:underline transition-colors" {...props} />,
+    a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => 
+      <a className="text-accent hover:underline transition-colors px-1" 
+        style={{ 
+          backgroundColor: 'var(--code-bg)',
+          borderColor: 'var(--border-color)'
+      }}{...props} />,
     table: (props: React.HTMLAttributes<HTMLTableElement>) => (
-      <table 
-        className="border-collapse my-4 w-full rounded-md overflow-hidden transition-colors" 
-        style={{ borderColor: 'var(--border-color)' }}
-        {...props} 
-      />
+      <div className="my-6 overflow-x-auto">
+        <table 
+          className="border-collapse w-full rounded-md transition-colors" 
+          style={{ borderColor: 'var(--border-color)' }}
+          {...props} 
+        />
+      </div>
+    ),
+    thead: (props: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <thead {...props} />
+    ),
+    tbody: (props: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <tbody {...props} />
+    ),
+    tr: (props: React.HTMLAttributes<HTMLTableRowElement>) => (
+      <tr {...props} />
     ),
     th: (props: React.HTMLAttributes<HTMLTableCellElement>) => (
       <th 
-        className="border px-4 py-2 font-bold text-foreground transition-colors" 
+        className="border px-2 sm:px-3 md:px-4 py-2 text-xs sm:text-sm font-bold text-left text-foreground transition-colors" 
         style={{
           backgroundColor: 'var(--code-bg)',
           borderColor: 'var(--border-color)'
@@ -349,7 +395,7 @@ export default function BlogPostPage() {
     ),
     td: (props: React.HTMLAttributes<HTMLTableCellElement>) => (
       <td 
-        className="border px-4 py-2 text-foreground transition-colors" 
+        className="border px-2 sm:px-3 md:px-4 py-2 text-xs sm:text-sm text-foreground transition-colors" 
         style={{ 
           backgroundColor: 'var(--article-bg)',
           borderColor: 'var(--border-color)'
@@ -429,45 +475,53 @@ export default function BlogPostPage() {
   // If not found, show loading while redirecting
   if (notFound) {
     return (
-      <div className="container mx-auto px-12 sm:px-14 md:px-16 max-w-7xl p-8">
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mb-4"></div>
-          <p className="text-text-secondary">Redirecting...</p>
+      <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 max-w-7xl py-4 sm:py-6 md:py-8">
+        <div className="flex flex-col items-center justify-center py-12 sm:py-16 md:py-20">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-accent mb-4"></div>
+          <p className="text-text-secondary text-sm sm:text-base">Redirecting...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-12 sm:px-14 md:px-16 max-w-7xl p-8">
-      <Button href={isAdminMode ? "/admin/blog" : "/blog"} className="mb-4">
+    <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 max-w-9xl py-4 sm:py-6 md:py-8">
+      <Button href={isAdminMode ? "/admin/blog" : "/blog"} className="mb-4 sm:mb-6">
         Back to Blog
         <IoArrowBackCircle size={20} />
       </Button>
       
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mb-4"></div>
-          <p className="text-text-secondary">Loading blog post...</p>
+        <div className="flex flex-col items-center justify-center py-12 sm:py-16 md:py-20">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-accent mb-4"></div>
+          <p className="text-text-secondary text-sm sm:text-base">Loading blog post...</p>
         </div>
       )}
       
       {content && !loading && (
-        <article 
-          className="markdown-content border p-12 rounded-2xl shadow-2xl transition-colors"
-          style={{ 
-            backgroundColor: 'var(--article-bg)',
-            borderColor: 'var(--border-color)'
-          }}
-        >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeRaw, rehypeKatex]}
-            components={markdownComponents}
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start">
+          {/* Main Article Content */}
+          <article 
+            className="markdown-content border p-4 sm:p-6 md:p-8 lg:p-12 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl transition-colors flex-1 w-full lg:min-w-0 max-w-full overflow-hidden"
+            style={{ 
+              backgroundColor: 'var(--article-bg)',
+              borderColor: 'var(--border-color)'
+            }}
           >
-            {content}
-          </ReactMarkdown>
-        </article>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
+              components={markdownComponents}
+            >
+              {content}
+            </ReactMarkdown>
+          </article>
+
+          {/* Table of Contents - Hidden on mobile/tablet, shown on desktop */}
+          <aside className="hidden xl:block sticky top-24 lg:w-40 xl:w-80 shrink-0 self-start">
+            <TableOfContents content={content} />
+          </aside>
+        </div>
       )}
 
       {/* Toast Container for code copy notifications */}

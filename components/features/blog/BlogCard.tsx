@@ -6,6 +6,8 @@ import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { Button } from '@/components/common/Button';
 import { MdOutlineReadMore } from 'react-icons/md';
 import { IoTrashOutline, IoPencilOutline } from 'react-icons/io5';
+import { CgCalendarDates } from 'react-icons/cg';
+import { TbCategory } from 'react-icons/tb';
 
 interface BlogCardProps {
   post: BlogPostMetadata;
@@ -44,6 +46,30 @@ export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCa
         <h2 className="text-foreground font-medium text-xl group-hover:text-accent transition-colors line-clamp-2 min-h-14">
           {post.title}
         </h2>
+
+        {/* Meta Information: Date and Category */}
+        <div className="flex flex-col gap-3 text-xs text-text-secondary">
+          {post.date && (
+            <div className="flex items-center gap-1">
+              <CgCalendarDates size={16} />
+
+              <time dateTime={post.date}>
+                {new Date(post.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </time>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <TbCategory size={16} />
+
+            <span className="px-2 py-0.5 rounded bg-accent/10 text-accent font-medium">
+              {post.category || 'Uncategorized'}
+            </span>
+          </div>
+        </div>
 
         {/* Description */}
         <p className="text-text-secondary text-sm line-clamp-3 flex-1 min-h-18">

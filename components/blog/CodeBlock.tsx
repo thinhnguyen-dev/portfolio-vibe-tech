@@ -88,8 +88,8 @@ export function CodeBlock({ children, className, inline }: CodeBlockProps) {
         backgroundColor: 'var(--code-bg)',
         borderColor: 'var(--border-color)',
         boxShadow: isDarkTheme 
-          ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
-          : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 0 20px rgba(199, 120, 221, 0.15)'
+          : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 20px rgba(199, 120, 221, 0.12)',
       }}
       ref={codeRef}
     >
@@ -98,11 +98,21 @@ export function CodeBlock({ children, className, inline }: CodeBlockProps) {
         className="flex items-center justify-between px-4 py-2 border-b transition-colors"
         style={{
           background: isDarkTheme
-            ? 'linear-gradient(135deg, rgba(199, 120, 221, 0.1) 0%, rgba(37, 40, 45, 1) 50%, rgba(30, 33, 38, 0.95) 100%)'
-            : 'linear-gradient(135deg, rgba(199, 120, 221, 0.08) 0%, rgba(249, 250, 251, 1) 50%, rgba(243, 244, 246, 0.98) 100%)',
+            ? 'linear-gradient(to right, rgba(37, 40, 45, 1) 0%, rgba(199, 120, 221, 0.15) 50%, rgba(37, 40, 45, 1) 100%)'
+            : 'linear-gradient(to right, rgba(249, 250, 251, 1) 0%, rgba(199, 120, 221, 0.12) 50%, rgba(249, 250, 251, 1) 100%)',
           borderColor: 'var(--border-color)',
         }}
       >
+        <div className="flex items-center gap-2">
+            <button className="w-4 h-4 rounded-full bg-[#ff5f57] hover:bg-[#ff4747] transition-colors flex items-center justify-center group" aria-label="Close">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#740000] opacity-0 group-hover:opacity-100 transition-opacity"></span>
+            </button>
+            <button className="w-4 h-4 rounded-full bg-[#ffbd2e] hover:bg-[#ffb400] transition-colors flex items-center justify-center group" aria-label="Minimize">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#995700] opacity-0 group-hover:opacity-100 transition-opacity"></span>
+            </button><button className="w-4 h-4 rounded-full bg-[#28c840] hover:bg-[#24b339] transition-colors flex items-center justify-center group" aria-label="Maximize">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#006500] opacity-0 group-hover:opacity-100 transition-opacity"></span>
+            </button>
+        </div>
         {/* Language Label */}
         <div className="flex items-center gap-2">
           <span 

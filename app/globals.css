@@ -59,6 +59,50 @@ samp {
   font-variant-ligatures: common-ligatures;
 }
 
+/* Ensure article width remains fixed - constrain all child elements */
+.markdown-content {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Constrain images */
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Constrain code blocks and pre elements */
+.markdown-content pre,
+.markdown-content .code-block-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+/* Constrain tables */
+.markdown-content table {
+  max-width: 100%;
+  width: 100%;
+  table-layout: auto;
+  box-sizing: border-box;
+}
+
+/* Constrain iframes and videos */
+.markdown-content iframe,
+.markdown-content video {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Constrain any other block-level elements */
+.markdown-content > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Remove bottom margin from paragraphs inside blockquotes */
 .markdown-content blockquote p {
   margin-bottom: 0 !important;
@@ -534,4 +578,103 @@ samp {
 .code-block-wrapper code[class*="language-"] {
   background: transparent !important;
   color: var(--foreground) !important;
+}
+
+/* Custom Scrollbar Styling for Table of Contents */
+.toc-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.toc-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.toc-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.toc-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.toc-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+/* Dark theme scrollbar adjustments */
+:root.dark .toc-container::-webkit-scrollbar-thumb {
+  background: rgba(171, 178, 191, 0.3);
+}
+
+:root.dark .toc-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+/* Light theme scrollbar adjustments */
+:root.light .toc-container::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.3);
+}
+
+:root.light .toc-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+/* Heading Glow Effect on Hover */
+.heading-glow {
+  transition: text-shadow 0.3s ease, filter 0.3s ease;
+  cursor: pointer;
+}
+
+.heading-glow:hover {
+  text-shadow: 
+    0 0 10px rgba(199, 120, 221, 0.4),
+    0 0 20px rgba(199, 120, 221, 0.3),
+    0 0 30px rgba(199, 120, 221, 0.2);
+  filter: brightness(1.1);
+}
+
+.heading-glow:hover span {
+  text-shadow: 
+    0 0 8px rgba(199, 120, 221, 0.6),
+    0 0 16px rgba(199, 120, 221, 0.4),
+    0 0 24px rgba(199, 120, 221, 0.3);
+  filter: brightness(1.15);
+}
+
+/* Dark theme adjustments */
+:root.dark .heading-glow:hover {
+  text-shadow: 
+    0 0 12px rgba(199, 120, 221, 0.5),
+    0 0 24px rgba(199, 120, 221, 0.35),
+    0 0 36px rgba(199, 120, 221, 0.25);
+}
+
+:root.dark .heading-glow:hover span {
+  text-shadow: 
+    0 0 10px rgba(199, 120, 221, 0.7),
+    0 0 20px rgba(199, 120, 221, 0.5),
+    0 0 30px rgba(199, 120, 221, 0.4);
+}
+
+/* Light theme adjustments */
+:root.light .heading-glow:hover {
+  text-shadow: 
+    0 0 8px rgba(199, 120, 221, 0.35),
+    0 0 16px rgba(199, 120, 221, 0.25),
+    0 0 24px rgba(199, 120, 221, 0.15);
+}
+
+:root.light .heading-glow:hover span {
+  text-shadow: 
+    0 0 6px rgba(199, 120, 221, 0.5),
+    0 0 12px rgba(199, 120, 221, 0.35),
+    0 0 18px rgba(199, 120, 221, 0.25);
 }

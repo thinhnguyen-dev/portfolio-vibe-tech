@@ -32,6 +32,8 @@ export default function AdminBlogPage() {
   const [showUpdatePasswordModal, setShowUpdatePasswordModal] = useState(false);
   const [pendingDeleteSlug, setPendingDeleteSlug] = useState<string | null>(null);
   const [pendingUpdatePost, setPendingUpdatePost] = useState<FirebaseBlogPostMetadata | null>(null);
+  const [pendingUpdateSlug, setPendingUpdateSlug] = useState<string | null>(null);
+  const [verifiedPassword, setVerifiedPassword] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pendingUploadData, setPendingUploadData] = useState<{
     file: File;
@@ -148,33 +150,10 @@ export default function AdminBlogPage() {
     setShowPasswordModal(true);
   };
 
-  const handleUpdateClick = async (post: BlogPostMetadata) => {
-    // Fetch full Firebase metadata for the post via API
-    try {
-      const response = await fetch(`/api/blog/metadata/${post.slug}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Convert ISO strings back to Date objects to match FirebaseBlogPostMetadata type
-        const fullPost: FirebaseBlogPostMetadata = {
-          blogId: data.blogId,
-          uuid: data.uuid,
-          title: data.title,
-          description: data.description,
-          thumbnail: data.thumbnail,
-          slug: data.slug,
-          createdAt: new Date(data.createdAt),
-          modifiedAt: new Date(data.modifiedAt),
-        };
-        setPendingUpdatePost(fullPost);
-        // Show password modal first before showing update modal
-        setShowUpdatePasswordModal(true);
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Could not load blog post details');
-      }
-    } catch {
-      toast.error('Failed to load blog post details');
-    }
+  const handleUpdateClick = (post: BlogPostMetadata) => {
+    // Store the slug and show password modal first
+    setPendingUpdateSlug(post.slug);
+    setShowUpdatePasswordModal(true);
   };
 
   const handleUpdatePasswordVerify = async (password: string): Promise<boolean> => {
@@ -190,10 +169,43 @@ export default function AdminBlogPage() {
       const data = await response.json();
       const isValid = response.ok && data.success === true;
       
-      // If password is valid, show update modal
-      if (isValid) {
+      // If password is valid, fetch metadata and show update modal
+      if (isValid && pendingUpdateSlug) {
+        setVerifiedPassword(password);
         setShowUpdatePasswordModal(false);
-        setShowUpdateModal(true);
+        
+        // Fetch full Firebase metadata for the post via API
+        try {
+          const metadataResponse = await fetch(`/api/blog/metadata/${pendingUpdateSlug}`);
+          if (metadataResponse.ok) {
+            const metadataData = await metadataResponse.json();
+            // Convert ISO strings back to Date objects to match FirebaseBlogPostMetadata type
+            const fullPost: FirebaseBlogPostMetadata = {
+              blogId: metadataData.blogId,
+              uuid: metadataData.uuid,
+              title: metadataData.title,
+              description: metadataData.description,
+              thumbnail: metadataData.thumbnail,
+              slug: metadataData.slug,
+              createdAt: new Date(metadataData.createdAt),
+              modifiedAt: new Date(metadataData.modifiedAt),
+              category: metadataData.category,
+            };
+            setPendingUpdatePost(fullPost);
+            setShowUpdateModal(true);
+          } else {
+            const errorData = await metadataResponse.json();
+            toast.error(errorData.error || 'Could not load blog post details');
+            setVerifiedPassword(null);
+            setPendingUpdateSlug(null);
+            return false;
+          }
+        } catch {
+          toast.error('Failed to load blog post details');
+          setVerifiedPassword(null);
+          setPendingUpdateSlug(null);
+          return false;
+        }
       }
       
       return isValid;
@@ -209,7 +221,7 @@ export default function AdminBlogPage() {
     thumbnailFile?: File;
     zipFile?: File;
   }) => {
-    if (!pendingUpdatePost) return;
+    if (!pendingUpdatePost || !verifiedPassword) return;
 
     setUploading(true);
     setError(null);
@@ -219,6 +231,7 @@ export default function AdminBlogPage() {
       formData.append('slug', pendingUpdatePost.slug);
       formData.append('title', data.title);
       formData.append('description', data.description);
+      formData.append('password', verifiedPassword);
       
       if (data.image) {
         formData.append('image', data.image);
@@ -243,9 +256,18 @@ export default function AdminBlogPage() {
         toast.success(responseData.message || 'Blog post updated successfully!');
         setShowUpdateModal(false);
         setPendingUpdatePost(null);
+        setPendingUpdateSlug(null);
+        setVerifiedPassword(null);
         await fetchPosts();
       } else {
         toast.error(responseData.error || 'Failed to update blog post');
+        // If password error, close modal and reset
+        if (responseData.error?.toLowerCase().includes('password')) {
+          setShowUpdateModal(false);
+          setPendingUpdatePost(null);
+          setPendingUpdateSlug(null);
+          setVerifiedPassword(null);
+        }
       }
     } catch {
       toast.error('An error occurred while updating');
@@ -373,7 +395,7 @@ export default function AdminBlogPage() {
         isOpen={showUpdatePasswordModal}
         onClose={() => {
           setShowUpdatePasswordModal(false);
-          setPendingUpdatePost(null);
+          setPendingUpdateSlug(null);
         }}
         onVerify={handleUpdatePasswordVerify}
         title="Authentication Required"
@@ -417,6 +439,8 @@ export default function AdminBlogPage() {
         onClose={() => {
           setShowUpdateModal(false);
           setPendingUpdatePost(null);
+          setPendingUpdateSlug(null);
+          setVerifiedPassword(null);
           setError(null);
         }}
         onSubmit={handleUpdate}
