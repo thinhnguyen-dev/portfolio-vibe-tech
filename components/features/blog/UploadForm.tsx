@@ -164,10 +164,10 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
   };
 
   return (
-    <div className="p-6 border border-text-secondary/20 rounded-lg bg-background/50">
-      <h2 className="text-2xl font-bold text-foreground mb-4">Upload New Blog Post</h2>
+    <div className="p-4 sm:p-6 border border-text-secondary/20 rounded-lg bg-background/50">
+      <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4">Upload New Blog Post</h2>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div>
           <label htmlFor="file-input" className="block text-sm font-medium mb-2 text-foreground">
             Select ZIP Archive (.zip) containing the Markdown File (.md) and related images 
@@ -224,7 +224,7 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
           </label>
           
           {/* Mode Toggle */}
-          <div className="flex gap-4 mb-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
@@ -322,7 +322,7 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
         <button
           type="submit"
           disabled={!file || uploading}
-          className="bg-accent text-foreground px-6 py-2 rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
+          className="w-full sm:w-auto bg-accent text-foreground px-6 py-2 rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
         >
           {uploading ? (
             <>

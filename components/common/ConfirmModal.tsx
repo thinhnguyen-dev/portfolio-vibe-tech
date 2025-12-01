@@ -117,15 +117,15 @@ export function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             onKeyDown={handleKeyDown}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-md w-full p-6"
+              className="bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 my-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold text-foreground mb-2">{title}</h2>
-              <p className="text-text-secondary mb-6">{message}</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{title}</h2>
+              <p className="text-sm sm:text-base text-text-secondary mb-4 sm:mb-6">{message}</p>
               
               {requirePassword && (
                 <div className="mb-6">
@@ -159,12 +159,12 @@ export function ConfirmModal({
                 </div>
               )}
               
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
                 <button
                   type="button"
                   onClick={onClose}
                   disabled={loading || verifying}
-                  className="px-4 py-2 border border-text-secondary/20 text-foreground rounded-md hover:bg-text-secondary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-4 py-2 border border-text-secondary/20 text-foreground rounded-md hover:bg-text-secondary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {cancelText}
                 </button>
@@ -173,7 +173,7 @@ export function ConfirmModal({
                   type="button"
                   onClick={handleConfirm}
                   disabled={loading || verifying || (requirePassword && !password.trim())}
-                  className={`px-4 py-2 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${confirmButtonClass}`}
+                  className={`w-full sm:w-auto px-4 py-2 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${confirmButtonClass}`}
                 >
                   {loading || verifying ? 'Processing...' : confirmText}
                 </button>

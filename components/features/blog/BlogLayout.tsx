@@ -2,7 +2,6 @@
 
 import React, { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import Link from 'next/link';
 import { Button, SectionHeader } from '@/components';
 import { IoArrowBackCircle } from 'react-icons/io5';
 
@@ -62,7 +61,7 @@ export function BlogLayout({
       >
         <motion.div className="mb-8" variants={itemVariants}>
           <div className="mb-4">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <SectionHeader
                   title={title}
@@ -71,14 +70,21 @@ export function BlogLayout({
                 />
               </div>
               {(backLink || headerAction) && (
-                <motion.div className="flex items-center gap-4 shrink-0 pt-2" variants={itemVariants}>
+                <motion.div 
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shrink-0 sm:pt-2 w-full sm:w-auto" 
+                  variants={itemVariants}
+                >
                   {backLink && (
-                    <Button href={backLink.href} className="mb-4">
+                    <Button href={backLink.href} className="w-full sm:w-auto justify-center sm:justify-start mb-0 sm:mb-4">
                       {backLink.label}
                       <IoArrowBackCircle size={20} />
                     </Button>
                   )}
-                  {headerAction}
+                  {headerAction && (
+                    <div className="w-full sm:w-auto">
+                      {headerAction}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </div>

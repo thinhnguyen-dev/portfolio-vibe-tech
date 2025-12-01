@@ -9,6 +9,8 @@ import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { BlogLayout, UploadForm, BlogList, UpdateModal } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { useRouter } from 'next/navigation';
+import { IoPricetagsOutline } from 'react-icons/io5';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -22,6 +24,7 @@ const itemVariants = {
 };
 
 export default function AdminBlogPage() {
+  const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<BlogPostMetadata[]>([]);
@@ -331,6 +334,10 @@ export default function AdminBlogPage() {
     }
   };
 
+  const handleHashtagManagementClick = () => {
+    router.push('/admin/hashtags');
+  };
+
   const uploadRef = useRef<HTMLDivElement>(null);
   const postsRef = useRef<HTMLDivElement>(null);
   const uploadInView = useInView(uploadRef, { once: true, amount: 0.1 });
@@ -367,7 +374,16 @@ export default function AdminBlogPage() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.1 }}
       >
-        <h2 className="text-2xl font-bold text-foreground mb-6">Existing Blog Posts</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Existing Blog Posts</h2>
+          <button
+            onClick={handleHashtagManagementClick}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-md hover:bg-accent/30 transition-colors border border-accent/30 w-full sm:w-auto"
+          >
+            <IoPricetagsOutline size={20} />
+            <span>Hashtag Management</span>
+          </button>
+        </div>
         <BlogList
           posts={posts}
           onUpdate={handleUpdateClick}
@@ -451,7 +467,7 @@ export default function AdminBlogPage() {
 
       {/* Toast Container */}
       <ToastContainer
-        position="top-right"
+        position="top-center"
         autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}
@@ -461,6 +477,7 @@ export default function AdminBlogPage() {
         draggable
         pauseOnHover
         theme="dark"
+        toastClassName="min-w-[280px] sm:min-w-[320px]"
       />
     </BlogLayout>
   );

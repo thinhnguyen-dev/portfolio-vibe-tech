@@ -138,13 +138,13 @@ export function UpdateModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-2xl w-full p-6 my-8"
+              className="bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold text-foreground mb-2">Update Blog Post</h2>
-              <p className="text-text-secondary mb-6">Edit the blog post details below</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">Update Blog Post</h2>
+              <p className="text-sm sm:text-base text-text-secondary mb-4 sm:mb-6">Edit the blog post details below</p>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Title */}
                 <div>
                   <label htmlFor="update-title-input" className="block text-sm font-medium mb-2 text-foreground">
@@ -186,7 +186,7 @@ export function UpdateModal({
                   </label>
                   
                   {/* Mode Toggle */}
-                  <div className="flex gap-4 mb-3">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -303,19 +303,19 @@ export function UpdateModal({
                   </div>
                 )}
 
-                <div className="flex gap-3 justify-end">
+                <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
                   <button
                     type="button"
                     onClick={onClose}
                     disabled={updating}
-                    className="px-4 py-2 border border-text-secondary/20 text-foreground rounded-md hover:bg-text-secondary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 py-2 border border-text-secondary/20 text-foreground rounded-md hover:bg-text-secondary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!title.trim() || updating}
-                    className="px-4 py-2 bg-accent text-foreground rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 py-2 bg-accent text-foreground rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed"
                   >
                     {updating ? 'Updating...' : 'Update'}
                   </button>
