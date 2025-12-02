@@ -38,8 +38,10 @@ export interface BlogPostFirestoreData {
   thumbnail: string; // URL to thumbnail image
   createdAt: Timestamp;
   modifiedAt: Timestamp;
+  publishDate?: Timestamp; // Optional publish date
   slug: string; // URL-friendly slug for routing
-  category?: string; // Optional category for grouping blog posts
+  category?: string; // Optional category for grouping blog posts (backward compatibility)
+  hashtagIds?: string[]; // Array of hashtag IDs for multi-hashtag support
 }
 
 // Convert Firestore data to a more usable format
@@ -51,8 +53,10 @@ export interface BlogPostMetadata {
   thumbnail: string;
   createdAt: Date;
   modifiedAt: Date;
+  publishDate?: Date; // Optional publish date
   slug: string; // URL-friendly slug for routing
-  category?: string; // Optional category for grouping blog posts
+  category?: string; // Optional category for grouping blog posts (backward compatibility)
+  hashtagIds?: string[]; // Array of hashtag IDs for multi-hashtag support
 }
 
 /**
@@ -63,6 +67,8 @@ function convertTimestampToDate(data: BlogPostFirestoreData): BlogPostMetadata {
     ...data,
     createdAt: data.createdAt.toDate(),
     modifiedAt: data.modifiedAt.toDate(),
+    publishDate: data.publishDate?.toDate(),
+    hashtagIds: data.hashtagIds || [],
   };
 }
 
@@ -93,6 +99,8 @@ export async function saveBlogPostMetadata(
     description: string;
     thumbnail: string;
     category?: string;
+    publishDate?: Date;
+    hashtagIds?: string[];
   }
 ): Promise<string> {
   const db = getFirebaseDb();
@@ -115,6 +123,14 @@ export async function saveBlogPostMetadata(
     if (data.category !== undefined) {
       updateData.category = data.category || null;
     }
+    // Include publishDate if provided
+    if (data.publishDate !== undefined) {
+      updateData.publishDate = data.publishDate ? Timestamp.fromDate(data.publishDate) : null;
+    }
+    // Include hashtagIds if provided
+    if (data.hashtagIds !== undefined) {
+      updateData.hashtagIds = data.hashtagIds || [];
+    }
     await updateDoc(blogRef, updateData);
   } else {
     // Create new document with UUID as document ID
@@ -126,6 +142,8 @@ export async function saveBlogPostMetadata(
       description: data.description,
       thumbnail: data.thumbnail,
       category: data.category || null,
+      publishDate: data.publishDate ? Timestamp.fromDate(data.publishDate) : null,
+      hashtagIds: data.hashtagIds || [],
       createdAt: now,
       modifiedAt: now,
     });
@@ -286,6 +304,88 @@ export async function getBlogPostsCount(): Promise<number> {
   const q = query(blogsRef);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.length;
+}
+
+/**
+ * Get all blog posts filtered by hashtag IDs
+ * Returns blogs that have ANY of the specified hashtag IDs (OR logic)
+ * @param hashtagIds - Array of hashtag IDs to filter by
+ * @returns Array of blog posts that match at least one of the hashtag IDs, sorted by createdAt (newest first)
+ */
+export async function getBlogPostsByHashtags(hashtagIds: string[]): Promise<BlogPostMetadata[]> {
+  if (!hashtagIds || hashtagIds.length === 0) {
+    return getAllBlogPostsMetadata();
+  }
+
+  const db = getFirebaseDb();
+  const blogsRef = collection(db, BLOG_COLLECTION);
+  
+  // Firestore supports array-contains-any for OR logic (blogs with ANY of the hashtags)
+  // Note: Using orderBy with array-contains-any requires a composite index
+  // To avoid index requirements, we fetch without orderBy and sort client-side
+  const q = query(
+    blogsRef,
+    where('hashtagIds', 'array-contains-any', hashtagIds)
+  );
+  
+  const querySnapshot = await getDocs(q);
+  const posts = querySnapshot.docs.map((doc) => 
+    convertTimestampToDate(doc.data() as BlogPostFirestoreData)
+  );
+  
+  // Sort client-side by createdAt (newest first) to match getAllBlogPostsMetadata behavior
+  return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+/**
+ * Get count of blog posts filtered by hashtag IDs
+ * @param hashtagIds - Array of hashtag IDs to filter by
+ * @returns Count of blog posts that match at least one of the hashtag IDs
+ */
+export async function getBlogPostsCountByHashtags(hashtagIds: string[]): Promise<number> {
+  if (!hashtagIds || hashtagIds.length === 0) {
+    return getBlogPostsCount();
+  }
+
+  const db = getFirebaseDb();
+  const blogsRef = collection(db, BLOG_COLLECTION);
+  
+  const q = query(
+    blogsRef,
+    where('hashtagIds', 'array-contains-any', hashtagIds)
+  );
+  
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.length;
+}
+
+/**
+ * Get all blog posts that have no hashtags assigned
+ * @returns Array of blog posts with empty or no hashtagIds, sorted by createdAt (newest first)
+ */
+export async function getBlogPostsWithNoHashtags(): Promise<BlogPostMetadata[]> {
+  const db = getFirebaseDb();
+  const blogsRef = collection(db, BLOG_COLLECTION);
+  
+  // Query for blogs where hashtagIds is empty array or doesn't exist
+  // Firestore doesn't support querying for empty arrays directly, so we fetch all and filter
+  const allPosts = await getAllBlogPostsMetadata();
+  
+  // Filter posts with no hashtags (empty array or undefined)
+  const postsWithNoHashtags = allPosts.filter(
+    (post) => !post.hashtagIds || post.hashtagIds.length === 0
+  );
+  
+  return postsWithNoHashtags;
+}
+
+/**
+ * Get count of blog posts that have no hashtags assigned
+ * @returns Count of blog posts with empty or no hashtagIds
+ */
+export async function getBlogPostsCountWithNoHashtags(): Promise<number> {
+  const posts = await getBlogPostsWithNoHashtags();
+  return posts.length;
 }
 
 /**

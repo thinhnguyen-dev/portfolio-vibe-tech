@@ -678,3 +678,162 @@ samp {
     0 0 12px rgba(199, 120, 221, 0.35),
     0 0 18px rgba(199, 120, 221, 0.25);
 }
+
+/* Date Input Styling - Theme-aware */
+input[type="date"].date-input-custom {
+  position: relative;
+  cursor: pointer;
+  font-family: var(--font-fira-code), 'Fira Code', monospace;
+  padding-right: 2.75rem;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Dark theme date input background */
+:root.dark input[type="date"].date-input-custom {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Light theme date input background */
+:root.light input[type="date"].date-input-custom {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Hover state for date input border and background */
+input[type="date"].date-input-custom:hover:not(:disabled):not(:focus) {
+  border-color: rgba(171, 178, 191, 0.3);
+}
+
+:root.dark input[type="date"].date-input-custom:hover:not(:disabled):not(:focus) {
+  border-color: rgba(171, 178, 191, 0.4);
+  background-color: rgba(40, 44, 51, 0.8);
+}
+
+:root.light input[type="date"].date-input-custom:hover:not(:disabled):not(:focus) {
+  border-color: rgba(107, 114, 128, 0.3);
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+/* Focus state with theme-aware background */
+input[type="date"].date-input-custom:focus {
+  background-color: var(--background);
+}
+
+:root.dark input[type="date"].date-input-custom:focus {
+  background-color: var(--background);
+}
+
+:root.light input[type="date"].date-input-custom:focus {
+  background-color: var(--background);
+}
+
+/* Calendar icon styling for webkit browsers (Chrome, Safari, Edge) */
+input[type="date"].date-input-custom::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: opacity(0.7);
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+input[type="date"].date-input-custom:hover::-webkit-calendar-picker-indicator {
+  filter: opacity(1);
+  transform: scale(1.1);
+}
+
+input[type="date"].date-input-custom:focus::-webkit-calendar-picker-indicator {
+  filter: opacity(1);
+}
+
+/* Dark theme calendar icon */
+:root.dark input[type="date"].date-input-custom::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.7);
+}
+
+:root.dark input[type="date"].date-input-custom:hover::-webkit-calendar-picker-indicator,
+:root.dark input[type="date"].date-input-custom:focus::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(1);
+}
+
+/* Light theme calendar icon */
+:root.light input[type="date"].date-input-custom::-webkit-calendar-picker-indicator {
+  filter: opacity(0.6);
+}
+
+:root.light input[type="date"].date-input-custom:hover::-webkit-calendar-picker-indicator,
+:root.light input[type="date"].date-input-custom:focus::-webkit-calendar-picker-indicator {
+  filter: opacity(1);
+}
+
+/* Date input placeholder text styling */
+input[type="date"].date-input-custom::before {
+  content: attr(placeholder);
+  width: 100%;
+  color: var(--text-secondary);
+}
+
+input[type="date"].date-input-custom:focus::before,
+input[type="date"].date-input-custom:valid::before {
+  display: none;
+}
+
+/* Firefox date input styling */
+input[type="date"].date-input-custom::-moz-placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+/* Calendar dropdown styling (Webkit) */
+input[type="date"].date-input-custom::-webkit-datetime-edit {
+  color: var(--foreground);
+  font-family: var(--font-fira-code), 'Fira Code', monospace;
+}
+
+input[type="date"].date-input-custom::-webkit-datetime-edit-fields-wrapper {
+  color: var(--foreground);
+}
+
+input[type="date"].date-input-custom::-webkit-datetime-edit-text {
+  color: var(--text-secondary);
+  padding: 0 0.25rem;
+}
+
+input[type="date"].date-input-custom::-webkit-datetime-edit-month-field,
+input[type="date"].date-input-custom::-webkit-datetime-edit-day-field,
+input[type="date"].date-input-custom::-webkit-datetime-edit-year-field {
+  color: var(--foreground);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s ease;
+}
+
+input[type="date"].date-input-custom::-webkit-datetime-edit-month-field:focus,
+input[type="date"].date-input-custom::-webkit-datetime-edit-day-field:focus,
+input[type="date"].date-input-custom::-webkit-datetime-edit-year-field:focus {
+  background-color: rgba(199, 120, 221, 0.2);
+  outline: none;
+}
+
+/* Disabled state */
+input[type="date"].date-input-custom:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--code-bg);
+}
+
+:root.dark input[type="date"].date-input-custom:disabled {
+  background-color: rgba(30, 33, 38, 0.6);
+}
+
+:root.light input[type="date"].date-input-custom:disabled {
+  background-color: rgba(243, 244, 246, 0.8);
+}
+
+input[type="date"].date-input-custom:disabled::-webkit-calendar-picker-indicator {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Note: The native calendar popup/dropdown background is controlled by the browser 
+   and cannot be fully styled. The input field itself now has theme-aware backgrounds.
+   Browser date picker popups will use the system theme or browser defaults. */

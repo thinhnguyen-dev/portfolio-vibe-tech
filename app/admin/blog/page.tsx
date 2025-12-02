@@ -6,7 +6,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import type { BlogPostMetadata as FirebaseBlogPostMetadata } from '@/lib/firebase/blog';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
-import { BlogLayout, UploadForm, BlogList, UpdateModal } from '@/components/features/blog';
+import { BlogLayout, UploadForm, BlogList, UpdateModal, BlogFilterPanel } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { useRouter } from 'next/navigation';
@@ -38,6 +38,8 @@ export default function AdminBlogPage() {
   const [pendingUpdateSlug, setPendingUpdateSlug] = useState<string | null>(null);
   const [verifiedPassword, setVerifiedPassword] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedHashtagIds, setSelectedHashtagIds] = useState<string[]>([]);
+  const [filterNoHashtags, setFilterNoHashtags] = useState(false);
   const [pendingUploadData, setPendingUploadData] = useState<{
     file: File;
     title?: string;
@@ -48,17 +50,31 @@ export default function AdminBlogPage() {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [selectedHashtagIds, filterNoHashtags]);
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch('/api/blog/posts');
+      setLoading(true);
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      // Add no-hashtags filter if enabled
+      if (filterNoHashtags) {
+        params.append('noHashtags', 'true');
+      } else if (selectedHashtagIds.length > 0) {
+        // Add hashtag filter if any hashtags are selected (only if not filtering no hashtags)
+        params.append('hashtags', selectedHashtagIds.join(','));
+      }
+      
+      const response = await fetch(`/api/blog/posts?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         // API now returns { posts: [...], pagination: {...} }
         // Extract posts array from the response and ensure it's an array
         const postsData = data.posts || data;
         setPosts(Array.isArray(postsData) ? postsData : []);
+      } else {
+        toast.error('Failed to load blog posts');
       }
     } catch {
       toast.error('Failed to load blog posts');
@@ -192,7 +208,9 @@ export default function AdminBlogPage() {
               slug: metadataData.slug,
               createdAt: new Date(metadataData.createdAt),
               modifiedAt: new Date(metadataData.modifiedAt),
+              publishDate: metadataData.publishDate ? new Date(metadataData.publishDate) : undefined,
               category: metadataData.category,
+              hashtagIds: metadataData.hashtagIds || [],
             };
             setPendingUpdatePost(fullPost);
             setShowUpdateModal(true);
@@ -223,6 +241,8 @@ export default function AdminBlogPage() {
     image?: string;
     thumbnailFile?: File;
     zipFile?: File;
+    publishDate?: Date;
+    hashtagIds?: string[];
   }) => {
     if (!pendingUpdatePost || !verifiedPassword) return;
 
@@ -246,6 +266,17 @@ export default function AdminBlogPage() {
       
       if (data.zipFile) {
         formData.append('zipFile', data.zipFile);
+      }
+      
+      if (data.publishDate) {
+        // Convert Date to ISO string format (YYYY-MM-DD)
+        const dateStr = data.publishDate.toISOString().split('T')[0];
+        formData.append('publishDate', dateStr);
+      }
+      
+      // Always send hashtagIds if provided (even if empty array to remove all)
+      if (data.hashtagIds !== undefined) {
+        formData.append('hashtagIds', JSON.stringify(data.hashtagIds));
       }
 
       const response = await fetch('/api/blog/update', {
@@ -338,6 +369,16 @@ export default function AdminBlogPage() {
     router.push('/admin/hashtags');
   };
 
+  const handleHashtagFilterChange = (hashtagIds: string[]) => {
+    setSelectedHashtagIds(hashtagIds);
+    setFilterNoHashtags(false); // Clear no-hashtags filter when selecting hashtags
+  };
+
+  const handleNoHashtagsFilterToggle = () => {
+    setFilterNoHashtags(!filterNoHashtags);
+    setSelectedHashtagIds([]); // Clear hashtag selection when filtering no hashtags
+  };
+
   const uploadRef = useRef<HTMLDivElement>(null);
   const postsRef = useRef<HTMLDivElement>(null);
   const uploadInView = useInView(uploadRef, { once: true, amount: 0.1 });
@@ -384,6 +425,16 @@ export default function AdminBlogPage() {
             <span>Hashtag Management</span>
           </button>
         </div>
+        
+        {/* Blog Filter Panel */}
+        <BlogFilterPanel
+          selectedHashtagIds={selectedHashtagIds}
+          filterNoHashtags={filterNoHashtags}
+          onHashtagFilterChange={handleHashtagFilterChange}
+          onNoHashtagsFilterToggle={handleNoHashtagsFilterToggle}
+          disabled={uploading || deleting}
+        />
+        
         <BlogList
           posts={posts}
           onUpdate={handleUpdateClick}
@@ -467,7 +518,7 @@ export default function AdminBlogPage() {
 
       {/* Toast Container */}
       <ToastContainer
-        position="top-center"
+        position="top-right"
         autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}

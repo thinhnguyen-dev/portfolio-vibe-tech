@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
@@ -7,6 +9,11 @@ import { Button } from '@/components/common/Button';
 import { MdOutlineReadMore } from 'react-icons/md';
 import { IoTrashOutline, IoPencilOutline, IoPricetagsOutline } from 'react-icons/io5';
 import { CgCalendarDates } from 'react-icons/cg';
+
+interface Hashtag {
+  hashtagId: string;
+  name: string;
+}
 
 interface BlogCardProps {
   post: BlogPostMetadata;
@@ -16,6 +23,49 @@ interface BlogCardProps {
 }
 
 export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCardProps) {
+  const router = useRouter();
+  const [hashtags, setHashtags] = useState<Hashtag[]>([]);
+  const [loadingHashtags, setLoadingHashtags] = useState(false);
+
+  const handleHashtagClick = (hashtagId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Navigate to blog page with hashtag filter applied
+    // Special case for filtering blogs with no hashtags
+    if (hashtagId === '__no_hashtags__') {
+      router.push('/blog?noHashtags=true');
+    } else {
+      router.push(`/blog?hashtags=${hashtagId}`);
+    }
+  };
+
+  // Fetch hashtag names from hashtagIds
+  useEffect(() => {
+    const fetchHashtags = async () => {
+      if (!post.hashtagIds || post.hashtagIds.length === 0) {
+        setHashtags([]);
+        return;
+      }
+
+      setLoadingHashtags(true);
+      try {
+        const response = await fetch(`/api/hashtags?ids=${post.hashtagIds.join(',')}`);
+        if (response.ok) {
+          const data = await response.json();
+          setHashtags(data.hashtags || []);
+        } else {
+          setHashtags([]);
+        }
+      } catch (error) {
+        console.error('Error fetching hashtags:', error);
+        setHashtags([]);
+      } finally {
+        setLoadingHashtags(false);
+      }
+    };
+
+    fetchHashtags();
+  }, [post.hashtagIds]);
 
   return (
     <motion.div
@@ -62,12 +112,65 @@ export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCa
               </time>
             </div>
           )}
-          <div className="flex items-center gap-1.5">
-            <IoPricetagsOutline size={14} className="sm:w-4 sm:h-4" />
-
-            <span className="px-2 py-0.5 rounded bg-accent/10 text-accent font-medium text-xs">
-              {post.category || 'No hashtag'}
-            </span>
+          {/* Hashtags */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <IoPricetagsOutline size={14} className="sm:w-4 sm:h-4 shrink-0" />
+            {loadingHashtags ? (
+              <span className="text-text-secondary text-xs">Loading hashtags...</span>
+            ) : hashtags.length > 0 ? (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {hashtags.slice(0, 5).map((hashtag) => (
+                  <button
+                    key={hashtag.hashtagId}
+                    type="button"
+                    onClick={(e) => handleHashtagClick(hashtag.hashtagId, e)}
+                    className="px-2 py-0.5 rounded bg-accent/10 text-accent font-medium text-sm hover:bg-accent/20 transition-colors cursor-pointer"
+                    title={`Filter blogs by ${hashtag.name}`}
+                  >
+                    {hashtag.name}
+                  </button>
+                ))}
+                {hashtags.length > 5 && (
+                  <div className="relative">
+                    <span 
+                      className="px-2 py-0.5 rounded bg-accent/10 text-accent font-medium text-sm cursor-help hover:bg-accent/20 transition-colors peer"
+                      title={hashtags.map((h) => h.name).join(', ')}
+                    >
+                      +{hashtags.length - 5} more
+                    </span>
+                    {/* Tooltip - appears on hover of the "+X more" element only */}
+                    <div className="absolute bottom-full left-0 mb-2 opacity-0 invisible peer-hover:opacity-100 peer-hover:visible hover:opacity-100 hover:visible transition-opacity duration-200 z-50 w-64 max-w-[calc(100vw-2rem)] p-3 bg-background border border-text-secondary/20 rounded-md shadow-xl text-xs text-foreground">
+                      <div className="font-semibold mb-2 text-foreground">All hashtags:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {hashtags.map((hashtag) => (
+                          <button
+                            key={hashtag.hashtagId}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleHashtagClick(hashtag.hashtagId, e);
+                            }}
+                            className="px-2 py-1 rounded bg-accent/10 text-accent font-medium hover:bg-accent/20 transition-colors cursor-pointer"
+                            title={`Filter blogs by ${hashtag.name}`}
+                          >
+                            {hashtag.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => handleHashtagClick('__no_hashtags__', e)}
+                className="px-2 py-0.5 rounded bg-accent/10 text-red-500 font-medium text-sm hover:bg-accent/20 transition-colors cursor-pointer"
+                title="Filter blogs with no hashtags"
+              >
+                No hashtags
+              </button>
+            )}
           </div>
         </div>
 

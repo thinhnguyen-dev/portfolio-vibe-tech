@@ -16,6 +16,10 @@ import {
   where,
   Timestamp,
   QueryDocumentSnapshot,
+  runTransaction,
+  arrayUnion,
+  arrayRemove,
+  increment,
 } from 'firebase/firestore';
 import { generateUUID } from './blog';
 
@@ -315,3 +319,110 @@ export async function searchHashtags(
     .slice(0, limitCount);
 }
 
+/**
+ * Get blogs by hashtag ID
+ * @param hashtagId - ID of the hashtag
+ * @returns Array of blog IDs
+ */
+export async function getBlogIdsByHashtag(hashtagId: string): Promise<string[]> {
+  try {
+    const hashtag = await getHashtagById(hashtagId);
+    return hashtag?.linkedBlogIds || [];
+  } catch (error) {
+    console.error(`Error fetching blogs for hashtag ${hashtagId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Update blog-hashtag relationships
+ * This function updates both the blog's hashtagIds and the hashtags' linkedBlogIds
+ * Uses a transaction to ensure consistency
+ * @param blogId - ID of the blog post
+ * @param hashtagIds - Array of hashtag IDs to assign to the blog
+ */
+export async function updateBlogHashtags(
+  blogId: string,
+  hashtagIds: string[]
+): Promise<void> {
+  const db = getFirebaseDb();
+  const BLOG_COLLECTION = 'blogPosts';
+  
+  // Get current blog document to find old hashtag IDs
+  const blogRef = doc(db, BLOG_COLLECTION, blogId);
+  const blogDoc = await getDoc(blogRef);
+  
+  if (!blogDoc.exists()) {
+    throw new Error(`Blog with ID "${blogId}" not found`);
+  }
+  
+  const oldHashtagIds = blogDoc.data()?.hashtagIds || [];
+  const newHashtagIds = hashtagIds || [];
+  
+  // Find added and removed hashtag IDs
+  const addedHashtagIds = newHashtagIds.filter(id => !oldHashtagIds.includes(id));
+  const removedHashtagIds = oldHashtagIds.filter(id => !newHashtagIds.includes(id));
+  
+  // Use transaction to update both blog and hashtag documents atomically
+  await runTransaction(db, async (transaction) => {
+    // Update blog document
+    transaction.update(blogRef, {
+      hashtagIds: newHashtagIds,
+      modifiedAt: Timestamp.now(),
+    });
+    
+    // Update hashtag documents - add blog to new hashtags
+    for (const hashtagId of addedHashtagIds) {
+      const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
+      const hashtagDoc = await transaction.get(hashtagRef);
+      
+      if (hashtagDoc.exists()) {
+        const currentLinkedBlogIds = hashtagDoc.data()?.linkedBlogIds || [];
+        if (!currentLinkedBlogIds.includes(blogId)) {
+          transaction.update(hashtagRef, {
+            linkedBlogIds: arrayUnion(blogId),
+            blogCount: increment(1),
+            updatedAt: Timestamp.now(),
+          });
+        }
+      }
+    }
+    
+    // Update hashtag documents - remove blog from old hashtags
+    for (const hashtagId of removedHashtagIds) {
+      const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
+      const hashtagDoc = await transaction.get(hashtagRef);
+      
+      if (hashtagDoc.exists()) {
+        const currentLinkedBlogIds = hashtagDoc.data()?.linkedBlogIds || [];
+        if (currentLinkedBlogIds.includes(blogId)) {
+          transaction.update(hashtagRef, {
+            linkedBlogIds: arrayRemove(blogId),
+            blogCount: increment(-1),
+            updatedAt: Timestamp.now(),
+          });
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Get hashtag details for an array of hashtag IDs
+ * @param hashtagIds - Array of hashtag IDs
+ * @returns Array of Hashtag objects
+ */
+export async function getHashtagsByIds(hashtagIds: string[]): Promise<Hashtag[]> {
+  if (!hashtagIds || hashtagIds.length === 0) {
+    return [];
+  }
+  
+  try {
+    const hashtagPromises = hashtagIds.map(id => getHashtagById(id));
+    const hashtags = await Promise.all(hashtagPromises);
+    return hashtags.filter((hashtag): hashtag is Hashtag => hashtag !== null);
+  } catch (error) {
+    console.error('Error fetching hashtags by IDs:', error);
+    return [];
+  }
+}

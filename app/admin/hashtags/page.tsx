@@ -8,6 +8,7 @@ import { BlogLayout } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { HashtagFormModal } from '@/components/common/HashtagFormModal';
+import { HashtagSearch } from '@/components/common/HashtagSearch';
 import { IoAdd, IoPencil, IoTrash, IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import type { Hashtag } from '@/lib/firebase/hashtags';
 
@@ -24,6 +25,20 @@ const itemVariants = {
 
 const HASHTAGS_PER_PAGE = 10;
 
+/**
+ * Format date to DD:MM:YYYY format
+ */
+const formatDate = (date: Date | string): string => {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export default function AdminHashtagsPage() {
   const [hashtags, setHashtags] = useState<Hashtag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +46,7 @@ export default function AdminHashtagsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Form modal state
   const [showFormModal, setShowFormModal] = useState(false);
@@ -56,7 +72,20 @@ export default function AdminHashtagsPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/hashtags?page=${currentPage}&limit=${HASHTAGS_PER_PAGE}`);
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchTerm.trim()) {
+        // If searching, use search endpoint
+        params.append('q', searchTerm.trim());
+        params.append('limit', '100'); // Get more results when searching
+      } else {
+        // Otherwise, use pagination
+        params.append('page', currentPage.toString());
+        params.append('limit', HASHTAGS_PER_PAGE.toString());
+      }
+      
+      const response = await fetch(`/api/hashtags?${params.toString()}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -75,9 +104,18 @@ export default function AdminHashtagsPage() {
               } as Hashtag;
             })
           : [];
+        
         setHashtags(hashtagsWithDates);
-        setTotalPages(data.pagination?.totalPages || 1);
-        setTotalCount(data.pagination?.total || 0);
+        
+        // Update pagination info
+        if (searchTerm.trim()) {
+          // When searching, show all results on one page
+          setTotalPages(1);
+          setTotalCount(hashtagsWithDates.length);
+        } else {
+          setTotalPages(data.pagination?.totalPages || 1);
+          setTotalCount(data.pagination?.total || 0);
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to load hashtags');
@@ -91,7 +129,7 @@ export default function AdminHashtagsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage]);
+  }, [currentPage, searchTerm]);
 
   useEffect(() => {
     fetchHashtags();
@@ -355,6 +393,24 @@ export default function AdminHashtagsPage() {
     }
   };
 
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    // Reset to page 1 when search changes
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
+  const handleHashtagSelect = (hashtag: Hashtag) => {
+    // Set search term to the selected hashtag name
+    // This will trigger fetchHashtags which will search for matching hashtags
+    setSearchTerm(hashtag.name);
+    // Reset to page 1 when selecting a hashtag
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
 
   return (
     <BlogLayout
@@ -375,6 +431,14 @@ export default function AdminHashtagsPage() {
           <h2 className="text-xl sm:text-2xl font-bold text-foreground">
             All Hashtags {totalCount > 0 && `(${totalCount})`}
           </h2>
+          <div className="w-full sm:w-auto sm:max-w-md">
+            <HashtagSearch
+              onSelect={handleHashtagSelect}
+              onSearchChange={handleSearchChange}
+              placeholder="Search hashtags by name..."
+              disabled={submitting || deleting}
+            />
+          </div>
           <button
             onClick={handleCreateClick}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-accent text-foreground rounded-md hover:bg-accent/80 transition-colors w-full sm:w-auto"
@@ -429,20 +493,16 @@ export default function AdminHashtagsPage() {
                       style={{ backgroundColor: 'var(--article-bg)' }}
                     >
                       <td className="px-4 py-3 text-sm text-foreground font-mono">
-                        {hashtag.hashtagId}
+                        {hashtag.hashtagId?.substring(0, 8)}
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground font-medium">
                         {hashtag.name}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary">
-                        {hashtag.createdAt instanceof Date 
-                          ? hashtag.createdAt.toLocaleDateString() 
-                          : new Date(hashtag.createdAt).toLocaleDateString()}
+                        {formatDate(hashtag.createdAt)}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary">
-                        {hashtag.updatedAt instanceof Date 
-                          ? hashtag.updatedAt.toLocaleDateString() 
-                          : new Date(hashtag.updatedAt).toLocaleDateString()}
+                        {formatDate(hashtag.updatedAt)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-2">
@@ -508,15 +568,11 @@ export default function AdminHashtagsPage() {
                     <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary pt-3 border-t border-text-secondary/20">
                       <div>
                         <span className="font-medium text-foreground">Created:</span>{' '}
-                        {hashtag.createdAt instanceof Date 
-                          ? hashtag.createdAt.toLocaleDateString() 
-                          : new Date(hashtag.createdAt).toLocaleDateString()}
+                        {formatDate(hashtag.createdAt)}
                       </div>
                       <div>
                         <span className="font-medium text-foreground">Updated:</span>{' '}
-                        {hashtag.updatedAt instanceof Date 
-                          ? hashtag.updatedAt.toLocaleDateString() 
-                          : new Date(hashtag.updatedAt).toLocaleDateString()}
+                        {formatDate(hashtag.updatedAt)}
                       </div>
                     </div>
                   </div>
@@ -694,7 +750,7 @@ export default function AdminHashtagsPage() {
 
       {/* Toast Container */}
       <ToastContainer
-        position="top-center"
+        position="top-right"
         autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}

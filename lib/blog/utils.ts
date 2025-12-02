@@ -12,6 +12,7 @@ export interface BlogPostMetadata {
   image?: string;
   blogId?: string; // Optional UUID for unique identification
   category?: string; // Optional category for grouping blog posts
+  hashtagIds?: string[]; // Array of hashtag IDs for fetching hashtag names
 }
 
 export function getAllBlogSlugs(): string[] {

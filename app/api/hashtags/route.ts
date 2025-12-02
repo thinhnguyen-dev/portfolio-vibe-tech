@@ -2,7 +2,8 @@ import {
   createHashtag,
   getAllHashtags,
   getHashtagsCount,
-  searchHashtags
+  searchHashtags,
+  getHashtagsByIds
 } from '@/lib/firebase/hashtags';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -24,7 +25,17 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const page = searchParams.get('page');
     const limitParam = searchParams.get('limit');
-    const search = searchParams.get('search');
+    const search = searchParams.get('search') || searchParams.get('q'); // Support both 'search' and 'q'
+    const ids = searchParams.get('ids'); // Comma-separated list of hashtag IDs
+    
+    // If IDs parameter is provided, fetch hashtags by IDs
+    if (ids) {
+      const hashtagIds = ids.split(',').map(id => id.trim()).filter(id => id.length > 0);
+      if (hashtagIds.length > 0) {
+        const hashtags = await getHashtagsByIds(hashtagIds);
+        return NextResponse.json({ hashtags });
+      }
+    }
     
     // If search parameter is provided, perform search
     if (search) {

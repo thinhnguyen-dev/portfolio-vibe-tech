@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPaginatedBlogPostsMetadata, getBlogPostsCount } from '@/lib/firebase/blog';
+import { 
+  getPaginatedBlogPostsMetadata, 
+  getBlogPostsCount,
+  getBlogPostsByHashtags,
+  getBlogPostsCountByHashtags,
+  getAllBlogPostsMetadata,
+  getBlogPostsWithNoHashtags,
+  getBlogPostsCountWithNoHashtags
+} from '@/lib/firebase/blog';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,22 +15,36 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageLimit = parseInt(searchParams.get('limit') || '9', 10);
     
-    // Get total count for pagination info
-    const total = await getBlogPostsCount();
+    // Check if filtering for blogs with no hashtags
+    const noHashtagsParam = searchParams.get('noHashtags');
+    const filterNoHashtags = noHashtagsParam === 'true';
+    
+    // Check if hashtag filtering is requested
+    const hashtagsParam = searchParams.get('hashtags');
+    const hashtagIds = hashtagsParam 
+      ? hashtagsParam.split(',').map(id => id.trim()).filter(id => id.length > 0)
+      : [];
+    
+    let allPosts;
+    let total;
+    
+    // If filtering for blogs with no hashtags
+    if (filterNoHashtags) {
+      allPosts = await getBlogPostsWithNoHashtags();
+      total = await getBlogPostsCountWithNoHashtags();
+    } else if (hashtagIds.length > 0) {
+      // If hashtag filtering is requested, use filtered query
+      allPosts = await getBlogPostsByHashtags(hashtagIds);
+      total = await getBlogPostsCountByHashtags(hashtagIds);
+    } else {
+      // Otherwise, get all posts
+      allPosts = await getAllBlogPostsMetadata();
+      total = await getBlogPostsCount();
+    }
+    
+    // Calculate pagination
     const totalPages = Math.ceil(total / pageLimit);
-    
-    // For now, we'll fetch all posts and paginate
-    // In a production app with many posts, you'd want to implement proper cursor-based pagination
-    // This approach works well for blogs with reasonable post counts
-    const { posts, hasMore } = await getPaginatedBlogPostsMetadata(pageLimit);
-    
-    // Calculate offset for current page
     const offset = (page - 1) * pageLimit;
-    
-    // For simplicity, fetch all and slice (works for reasonable blog sizes)
-    // In production with 1000+ posts, implement cursor-based pagination
-    const { getAllBlogPostsMetadata } = await import('@/lib/firebase/blog');
-    const allPosts = await getAllBlogPostsMetadata();
     const paginatedPosts = allPosts.slice(offset, offset + pageLimit);
     
     // Convert to format expected by BlogList component
@@ -30,10 +52,12 @@ export async function GET(request: NextRequest) {
       slug: post.slug,
       title: post.title,
       excerpt: post.description,
-      date: post.createdAt.toISOString().split('T')[0],
+      // Use publishDate if available, otherwise fall back to createdAt
+      date: (post.publishDate || post.createdAt).toISOString().split('T')[0],
       image: post.thumbnail,
       blogId: post.blogId, // Include UUID for unique key
-      category: post.category || 'Uncategorized', // Default to 'Uncategorized' if no category
+      category: post.category, // Default to 'Uncategorized' if no category
+      hashtagIds: post.hashtagIds || [], // Include hashtag IDs for fetching hashtag names
     }));
     
     return NextResponse.json({
@@ -48,8 +72,26 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to fetch blog posts from Firestore:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = error instanceof Error ? error.stack : String(error);
+    console.error('Error details:', errorDetails);
+    
+    // Check if it's a Firestore index error
+    if (errorMessage.includes('index') || errorMessage.includes('failed-precondition')) {
+      return NextResponse.json(
+        { 
+          error: 'Database index required. Please check server logs for index creation link.',
+          details: errorMessage 
+        },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch blog posts' },
+      { 
+        error: 'Failed to fetch blog posts',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }

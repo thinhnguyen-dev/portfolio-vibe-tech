@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { BlogPostMetadata } from '@/lib/firebase/blog';
+import { HashtagSelector } from './HashtagSelector';
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -13,10 +14,26 @@ interface UpdateModalProps {
     image?: string;
     thumbnailFile?: File;
     zipFile?: File;
+    publishDate?: Date;
+    hashtagIds?: string[];
   }) => Promise<void>;
   post: BlogPostMetadata | null;
   updating: boolean;
   error: string | null;
+}
+
+// Helper function to get initial publish date
+function getInitialPublishDate(post: BlogPostMetadata | null): string {
+  if (!post) {
+    return new Date().toISOString().split('T')[0];
+  }
+  if (post.publishDate) {
+    return new Date(post.publishDate).toISOString().split('T')[0];
+  }
+  if (post.createdAt) {
+    return new Date(post.createdAt).toISOString().split('T')[0];
+  }
+  return new Date().toISOString().split('T')[0];
 }
 
 export function UpdateModal({
@@ -27,28 +44,61 @@ export function UpdateModal({
   updating,
   error: externalError,
 }: UpdateModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState('');
+  // Initialize state with values from post prop
+  const [title, setTitle] = useState(() => post?.title || '');
+  const [description, setDescription] = useState(() => post?.description || '');
+  const [image, setImage] = useState(() => post?.thumbnail || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageMode, setImageMode] = useState<'url' | 'upload'>('url');
   const [imagePreview, setImagePreview] = useState<string>('');
   const [zipFile, setZipFile] = useState<File | null>(null);
+  const [publishDate, setPublishDate] = useState(() => getInitialPublishDate(post));
+  const [hashtagIds, setHashtagIds] = useState<string[]>(() => post?.hashtagIds || []);
   const [error, setError] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const formKey = post?.blogId || '';
 
+  // Reset form when post changes or modal opens - batch updates using startTransition
+  // This ensures fresh data from Firestore is loaded when modal opens
   useEffect(() => {
     if (isOpen && post) {
-      setTitle(post.title);
-      setDescription(post.description || '');
-      setImage(post.thumbnail || '');
-      setImageFile(null);
-      setImagePreview('');
-      setImageMode('url');
-      setZipFile(null);
-      setError(null);
-      // Focus title input when modal opens
-      setTimeout(() => titleInputRef.current?.focus(), 100);
+      startTransition(() => {
+        // Reset all form fields to the original post values from Firestore
+        setTitle(post.title);
+        setDescription(post.description || '');
+        setImage(post.thumbnail || '');
+        setPublishDate(getInitialPublishDate(post));
+        setImageFile(null);
+        setImagePreview('');
+        setImageMode('url');
+        setZipFile(null);
+        // Reset hashtags to original values from Firestore
+        // Use a fresh array to ensure reference equality triggers HashtagSelector update
+        setHashtagIds(post.hashtagIds ? [...post.hashtagIds] : []);
+        setError(null);
+      });
+    } else if (!isOpen) {
+      // Reset form when modal closes to prevent stale data
+      startTransition(() => {
+        setTitle('');
+        setDescription('');
+        setImage('');
+        setPublishDate(new Date().toISOString().split('T')[0]);
+        setImageFile(null);
+        setImagePreview('');
+        setImageMode('url');
+        setZipFile(null);
+        setHashtagIds([]);
+        setError(null);
+      });
+    }
+  }, [isOpen, formKey, post]);
+
+  // Focus title input when modal opens
+  useEffect(() => {
+    if (isOpen && post) {
+      const timer = setTimeout(() => titleInputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, post]);
 
@@ -98,18 +148,46 @@ export function UpdateModal({
       finalImage = post?.thumbnail || '/default_blog_img.png';
     }
 
+    // Parse publish date
+    const publishDateObj = publishDate ? new Date(publishDate) : undefined;
+
+    // Submit form data including hashtagIds
+    // Note: All hashtag changes (additions/removals) made via UI are only in local state
+    // The actual Firestore update happens in the API route when this form is submitted
+    // If the user cancels or reloads, the original hashtagIds from Firestore will be restored
     await onSubmit({
       title: title.trim(),
       description: description.trim(),
       image: finalImage,
       thumbnailFile,
       zipFile: zipFile || undefined,
+      publishDate: publishDateObj,
+      hashtagIds: hashtagIds, // Only sent to Firestore when Update button is clicked
     });
+  };
+
+  // Handle modal close - reset all local state changes
+  // The parent component will fetch fresh data from Firestore when reopening
+  const handleClose = () => {
+    // Reset all form fields to original post values before closing
+    if (post) {
+      setTitle(post.title);
+      setDescription(post.description || '');
+      setImage(post.thumbnail || '');
+      setPublishDate(getInitialPublishDate(post));
+      setImageFile(null);
+      setImagePreview('');
+      setImageMode('url');
+      setZipFile(null);
+      setHashtagIds(post.hashtagIds || []);
+      setError(null);
+    }
+    onClose();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
-      onClose();
+      handleClose();
     }
   };
 
@@ -124,7 +202,7 @@ export function UpdateModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
           />
           
@@ -138,13 +216,13 @@ export function UpdateModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8"
+              className="absolute top-1.5 bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">Update Blog Post</h2>
               <p className="text-sm sm:text-base text-text-secondary mb-4 sm:mb-6">Edit the blog post details below</p>
               
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <form key={formKey} onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Title */}
                 <div>
                   <label htmlFor="update-title-input" className="block text-sm font-medium mb-2 text-foreground">
@@ -178,6 +256,30 @@ export function UpdateModal({
                     disabled={updating}
                   />
                 </div>
+
+                {/* Publish Date */}
+                <div>
+                  <label htmlFor="update-publish-date-input" className="block text-sm font-medium mb-2 text-foreground">
+                    Publish Date
+                  </label>
+                  <input
+                    id="update-publish-date-input"
+                    type="date"
+                    value={publishDate}
+                    onChange={(e) => setPublishDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-text-secondary/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed date-input-custom"
+                    disabled={updating}
+                    aria-label="Select publish date"
+                  />
+                </div>
+
+                {/* Hashtags */}
+                <HashtagSelector
+                  key={formKey} // Force remount when post changes to prevent stale hashtag data
+                  selectedHashtagIds={hashtagIds}
+                  onChange={setHashtagIds}
+                  disabled={updating}
+                />
 
                 {/* Cover Image */}
                 <div>
@@ -306,7 +408,7 @@ export function UpdateModal({
                 <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={updating}
                     className="w-full sm:w-auto px-4 py-2 border border-text-secondary/20 text-foreground rounded-md hover:bg-text-secondary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >

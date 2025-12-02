@@ -10,6 +10,7 @@ import {
   getBlogThumbnailPath,
   uploadBlogImagesToStorage,
 } from '@/lib/firebase/blog';
+import { updateBlogHashtags } from '@/lib/firebase/hashtags';
 import { getFirebaseStorage } from '@/lib/firebase/config';
 import { clearCache } from '@/lib/blog/cache';
 import { ref, listAll, deleteObject } from 'firebase/storage';
@@ -66,6 +67,8 @@ export async function POST(request: NextRequest) {
     const image = formData.get('image') as string | null;
     const thumbnailFile = formData.get('thumbnailFile') as File | null;
     const zipFile = formData.get('zipFile') as File | null;
+    const publishDateStr = formData.get('publishDate') as string | null;
+    const hashtagIdsStr = formData.get('hashtagIds') as string | null;
 
     if (!slug) {
       return NextResponse.json(
@@ -219,17 +222,68 @@ export async function POST(request: NextRequest) {
     // Prepare metadata for Firestore
     const finalTitle = title || existingPost.title;
     const finalDescription = description !== null ? description : existingPost.description;
+    
+    // Parse publish date if provided
+    let publishDate: Date | undefined;
+    if (publishDateStr) {
+      const parsedDate = new Date(publishDateStr);
+      if (!isNaN(parsedDate.getTime())) {
+        publishDate = parsedDate;
+      }
+    }
+    
+    // Parse hashtagIds if provided
+    let hashtagIds: string[] | undefined;
+    let shouldUpdateHashtags = false;
+    if (hashtagIdsStr !== null) {
+      shouldUpdateHashtags = true;
+      try {
+        const parsed = JSON.parse(hashtagIdsStr);
+        // Ensure it's an array (can be empty array)
+        if (Array.isArray(parsed)) {
+          hashtagIds = parsed;
+        } else {
+          hashtagIds = [];
+        }
+      } catch (error) {
+        console.warn('Failed to parse hashtagIds:', error);
+        hashtagIds = [];
+      }
+    }
 
     // Update metadata in Firestore
+    const metadataUpdate = {
+      title: finalTitle,
+      description: finalDescription,
+      thumbnail: thumbnailURL,
+      publishDate: publishDate,
+      hashtagIds: hashtagIds || [],
+    };
+    
+    if (publishDate !== undefined) {
+      metadataUpdate.publishDate = publishDate;
+    }
+    
+    // Only include hashtagIds if explicitly provided (can be empty array)
+    if (shouldUpdateHashtags) {
+      metadataUpdate.hashtagIds = hashtagIds || [];
+    }
+    
     try {
-      await saveBlogPostMetadata(uuid, slug, {
-        title: finalTitle,
-        description: finalDescription,
-        thumbnail: thumbnailURL,
-      });
+      await saveBlogPostMetadata(uuid, slug, metadataUpdate);
     } catch (error) {
       console.error('Failed to update metadata in Firestore:', error);
       // Continue even if metadata update fails
+    }
+    
+    // Update blog-hashtag relationships if hashtagIds were provided
+    if (shouldUpdateHashtags) {
+      try {
+        await updateBlogHashtags(uuid, hashtagIds || []);
+      } catch (error) {
+        console.error('Failed to update blog-hashtag relationships:', error);
+        // Continue even if relationship update fails
+      }
     }
 
     // Also update local filesystem as backup (optional)
