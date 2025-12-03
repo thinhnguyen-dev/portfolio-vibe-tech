@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { motion, useInView } from 'framer-motion';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { BlogCard } from './BlogCard';
+import { useHashtags } from './HashtagContext';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 
 interface BlogListProps {
@@ -57,6 +58,29 @@ export function BlogList({
 }: BlogListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const listInView = useInView(listRef, { once: true, amount: 0.1 });
+  const { fetchHashtags } = useHashtags();
+
+  // Collect all unique hashtag IDs from all posts
+  const allHashtagIds = useMemo(() => {
+    const idsSet = new Set<string>();
+    posts.forEach((post) => {
+      if (post.hashtagIds && Array.isArray(post.hashtagIds)) {
+        post.hashtagIds.forEach((id) => {
+          if (id && id.trim().length > 0) {
+            idsSet.add(id);
+          }
+        });
+      }
+    });
+    return Array.from(idsSet);
+  }, [posts]);
+
+  // Batch fetch all hashtags when posts change
+  useEffect(() => {
+    if (allHashtagIds.length > 0) {
+      fetchHashtags(allHashtagIds);
+    }
+  }, [allHashtagIds, fetchHashtags]);
 
   // Only show pagination if total items > 9
   const showPagination = totalItems > 9 && totalPages > 1 && onPageChange;

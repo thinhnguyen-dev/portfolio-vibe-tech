@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useRouter } from 'next/navigation';
 import { BlogLayout } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
@@ -40,13 +41,14 @@ const formatDate = (date: Date | string): string => {
 };
 
 export default function AdminHashtagsPage() {
+  const router = useRouter();
   const [hashtags, setHashtags] = useState<Hashtag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
   
   // Form modal state
   const [showFormModal, setShowFormModal] = useState(false);
@@ -75,9 +77,9 @@ export default function AdminHashtagsPage() {
       
       // Build query parameters
       const params = new URLSearchParams();
-      if (searchTerm.trim()) {
+      if (activeSearchTerm.trim()) {
         // If searching, use search endpoint
-        params.append('q', searchTerm.trim());
+        params.append('q', activeSearchTerm.trim());
         params.append('limit', '100'); // Get more results when searching
       } else {
         // Otherwise, use pagination
@@ -108,7 +110,7 @@ export default function AdminHashtagsPage() {
         setHashtags(hashtagsWithDates);
         
         // Update pagination info
-        if (searchTerm.trim()) {
+        if (activeSearchTerm.trim()) {
           // When searching, show all results on one page
           setTotalPages(1);
           setTotalCount(hashtagsWithDates.length);
@@ -129,7 +131,7 @@ export default function AdminHashtagsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, activeSearchTerm]);
 
   useEffect(() => {
     fetchHashtags();
@@ -139,6 +141,37 @@ export default function AdminHashtagsPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // Track if component has mounted and if we just changed pages
+  const hasMountedRef = useRef(false);
+  const prevPageRef = useRef(currentPage);
+  const pageChangedRef = useRef(false);
+
+  // Scroll to top when page number changes (after initial mount)
+  useEffect(() => {
+    if (hasMountedRef.current && prevPageRef.current !== currentPage) {
+      // Mark that we've changed pages
+      pageChangedRef.current = true;
+      // Scroll immediately when page changes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      prevPageRef.current = currentPage;
+    } else if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      prevPageRef.current = currentPage;
+    }
+  }, [currentPage]);
+
+  // Also scroll after loading completes if we just changed pages
+  useEffect(() => {
+    if (hasMountedRef.current && !loading && pageChangedRef.current) {
+      // Reset the flag and scroll again to ensure it sticks
+      pageChangedRef.current = false;
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   const handlePasswordVerify = async (password: string): Promise<boolean> => {
     try {
@@ -248,8 +281,9 @@ export default function AdminHashtagsPage() {
         setPendingFormName('');
         setEditingHashtag(null);
         setFormError(null);
-        // Reset to first page and refresh (this will update total count)
+        // Reset to first page and clear search
         setCurrentPage(1);
+        setActiveSearchTerm('');
         await fetchHashtags();
       } else {
         const errorMsg = data.error || 'Failed to create hashtag';
@@ -388,27 +422,28 @@ export default function AdminHashtagsPage() {
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
       setCurrentPage(newPage);
-      // Scroll entire page to top when navigating to a new page
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Scroll will be handled by useEffect watching currentPage
     }
   };
 
-  const handleSearchChange = (term: string) => {
-    setSearchTerm(term);
-    // Reset to page 1 when search changes
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    }
+  const handleSearchSubmit = (term: string) => {
+    // Set the active search term which will trigger fetchHashtags via useEffect
+    setActiveSearchTerm(term);
+    // Reset to page 1 when performing a new search
+    setCurrentPage(1);
   };
 
   const handleHashtagSelect = (hashtag: Hashtag) => {
-    // Set search term to the selected hashtag name
-    // This will trigger fetchHashtags which will search for matching hashtags
-    setSearchTerm(hashtag.name);
+    // Set the active search term to trigger search
+    setActiveSearchTerm(hashtag.name);
     // Reset to page 1 when selecting a hashtag
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
+  };
+
+  const handleBlogCountClick = (hashtagId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    // Navigate to blog page with hashtag filter
+    router.push(`/admin/blog?hashtags=${hashtagId}`);
   };
 
 
@@ -434,7 +469,7 @@ export default function AdminHashtagsPage() {
           <div className="w-full sm:w-auto sm:max-w-md">
             <HashtagSearch
               onSelect={handleHashtagSelect}
-              onSearchChange={handleSearchChange}
+              onSearchSubmit={handleSearchSubmit}
               placeholder="Search hashtags by name..."
               disabled={submitting || deleting}
             />
@@ -480,6 +515,7 @@ export default function AdminHashtagsPage() {
                   <tr className="border-b border-text-secondary/20" style={{ backgroundColor: 'var(--code-bg)' }}>
                     <th className="px-4 py-3 text-left text-sm font-bold text-foreground">ID</th>
                     <th className="px-4 py-3 text-left text-sm font-bold text-foreground">Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-foreground">Linked Blogs</th>
                     <th className="px-4 py-3 text-left text-sm font-bold text-foreground">Created</th>
                     <th className="px-4 py-3 text-left text-sm font-bold text-foreground">Updated</th>
                     <th className="px-4 py-3 text-center text-sm font-bold text-foreground">Actions</th>
@@ -497,6 +533,21 @@ export default function AdminHashtagsPage() {
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground font-medium">
                         {hashtag.name}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <button
+                          onClick={(e) => handleBlogCountClick(hashtag.hashtagId, e)}
+                          disabled={!hashtag.linkedBlogIds || hashtag.linkedBlogIds.length === 0}
+                          className="inline-flex items-center justify-center min-w-8 px-2 py-1 rounded-md text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50
+                            bg-accent/10 text-accent hover:bg-accent/20 hover:scale-105 active:scale-95
+                            disabled:bg-text-secondary/10 disabled:text-text-secondary disabled:hover:bg-text-secondary/10 disabled:hover:scale-100
+                            focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
+                          title={hashtag.linkedBlogIds && hashtag.linkedBlogIds.length > 0 
+                            ? `Click to view ${hashtag.linkedBlogIds.length} linked blog${hashtag.linkedBlogIds.length !== 1 ? 's' : ''}`
+                            : 'No linked blogs'}
+                        >
+                          {hashtag.linkedBlogIds?.length || 0}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary">
                         {formatDate(hashtag.createdAt)}
@@ -545,6 +596,22 @@ export default function AdminHashtagsPage() {
                         <p className="text-xs text-text-secondary font-mono truncate">
                           ID: {hashtag.hashtagId}
                         </p>
+                        <div className="mt-2">
+                          <button
+                            onClick={(e) => handleBlogCountClick(hashtag.hashtagId, e)}
+                            disabled={!hashtag.linkedBlogIds || hashtag.linkedBlogIds.length === 0}
+                            className="inline-flex items-center justify-center min-w-8 px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50
+                              bg-accent/10 text-accent hover:bg-accent/20 hover:scale-105 active:scale-95
+                              disabled:bg-text-secondary/10 disabled:text-text-secondary disabled:hover:bg-text-secondary/10 disabled:hover:scale-100
+                              focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
+                            title={hashtag.linkedBlogIds && hashtag.linkedBlogIds.length > 0 
+                              ? `Click to view ${hashtag.linkedBlogIds.length} linked blog${hashtag.linkedBlogIds.length !== 1 ? 's' : ''}`
+                              : 'No linked blogs'}
+                          >
+                            <span className="font-semibold">{hashtag.linkedBlogIds?.length || 0}</span>
+                            <span className="ml-1 text-[10px] opacity-75">blog{hashtag.linkedBlogIds && hashtag.linkedBlogIds.length !== 1 ? 's' : ''}</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 ml-2">
                         <button

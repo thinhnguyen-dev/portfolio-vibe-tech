@@ -1,19 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 import { Button } from '@/components/common/Button';
+import { useHashtags } from './HashtagContext';
 import { MdOutlineReadMore } from 'react-icons/md';
 import { IoTrashOutline, IoPencilOutline, IoPricetagsOutline } from 'react-icons/io5';
 import { CgCalendarDates } from 'react-icons/cg';
-
-interface Hashtag {
-  hashtagId: string;
-  name: string;
-}
 
 interface BlogCardProps {
   post: BlogPostMetadata;
@@ -24,8 +20,28 @@ interface BlogCardProps {
 
 export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCardProps) {
   const router = useRouter();
-  const [hashtags, setHashtags] = useState<Hashtag[]>([]);
-  const [loadingHashtags, setLoadingHashtags] = useState(false);
+  const pathname = usePathname();
+  const { getHashtags, isLoading } = useHashtags();
+
+  // Determine if we're in admin mode based on pathname or props
+  const isAdminMode = pathname?.startsWith('/admin') || !!onUpdate || !!onDelete;
+  const blogBasePath = isAdminMode ? '/admin/blog' : '/blog';
+
+  // Get hashtags from context
+  const hashtags = useMemo(() => {
+    if (!post.hashtagIds || post.hashtagIds.length === 0) {
+      return [];
+    }
+    return getHashtags(post.hashtagIds);
+  }, [post.hashtagIds, getHashtags]);
+
+  // Check if hashtags are still loading
+  const loadingHashtags = useMemo(() => {
+    if (!post.hashtagIds || post.hashtagIds.length === 0) {
+      return false;
+    }
+    return isLoading(post.hashtagIds);
+  }, [post.hashtagIds, isLoading]);
 
   const handleHashtagClick = (hashtagId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -33,39 +49,11 @@ export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCa
     // Navigate to blog page with hashtag filter applied
     // Special case for filtering blogs with no hashtags
     if (hashtagId === '__no_hashtags__') {
-      router.push('/blog?noHashtags=true');
+      router.push(`${blogBasePath}?noHashtags=true`);
     } else {
-      router.push(`/blog?hashtags=${hashtagId}`);
+      router.push(`${blogBasePath}?hashtags=${hashtagId}`);
     }
   };
-
-  // Fetch hashtag names from hashtagIds
-  useEffect(() => {
-    const fetchHashtags = async () => {
-      if (!post.hashtagIds || post.hashtagIds.length === 0) {
-        setHashtags([]);
-        return;
-      }
-
-      setLoadingHashtags(true);
-      try {
-        const response = await fetch(`/api/hashtags?ids=${post.hashtagIds.join(',')}`);
-        if (response.ok) {
-          const data = await response.json();
-          setHashtags(data.hashtags || []);
-        } else {
-          setHashtags([]);
-        }
-      } catch (error) {
-        console.error('Error fetching hashtags:', error);
-        setHashtags([]);
-      } finally {
-        setLoadingHashtags(false);
-      }
-    };
-
-    fetchHashtags();
-  }, [post.hashtagIds]);
 
   return (
     <motion.div
@@ -98,7 +86,7 @@ export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCa
         </h2>
 
         {/* Meta Information: Date and Category */}
-        <div className="flex flex-col gap-2 sm:gap-3 text-xs text-text-secondary">
+        <div className="flex flex-col gap-2 sm:gap-3 text-sm text-text-secondary">
           {post.date && (
             <div className="flex items-center gap-1.5">
               <CgCalendarDates size={14} className="sm:w-4 sm:h-4" />

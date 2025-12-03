@@ -8,4 +8,5 @@ export { UpdateModal } from './UpdateModal';
 export { HashtagSelector } from './HashtagSelector';
 export { HashtagFilter } from './HashtagFilter';
 export { BlogFilterPanel } from './BlogFilterPanel';
+export { HashtagProvider } from './HashtagContext';
 

@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import type { BlogPostMetadata as FirebaseBlogPostMetadata } from '@/lib/firebase/blog';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
-import { BlogLayout, UploadForm, BlogList, UpdateModal, BlogFilterPanel } from '@/components/features/blog';
+import { BlogLayout, UploadForm, BlogList, UpdateModal, BlogFilterPanel, HashtagProvider } from '@/components/features/blog';
 import { PasswordModal } from '@/components/common/PasswordModal';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { IoPricetagsOutline } from 'react-icons/io5';
 
 const itemVariants = {
@@ -25,6 +25,7 @@ const itemVariants = {
 
 export default function AdminBlogPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<BlogPostMetadata[]>([]);
@@ -38,8 +39,40 @@ export default function AdminBlogPage() {
   const [pendingUpdateSlug, setPendingUpdateSlug] = useState<string | null>(null);
   const [verifiedPassword, setVerifiedPassword] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [selectedHashtagIds, setSelectedHashtagIds] = useState<string[]>([]);
-  const [filterNoHashtags, setFilterNoHashtags] = useState(false);
+  
+  // Initialize hashtag filter from URL query parameters BEFORE first render
+  // This prevents the double API call issue where first call uses empty array
+  const getInitialHashtagIds = () => {
+    // Use window.location.search as fallback if searchParams not ready
+    if (!searchParams) {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashtagsParam = urlParams.get('hashtags');
+        return hashtagsParam
+          ? hashtagsParam.split(',').map(id => id.trim()).filter(id => id.length > 0 && id !== '__no_hashtags__')
+          : [];
+      }
+      return [];
+    }
+    const hashtagsParam = searchParams.get('hashtags');
+    return hashtagsParam
+      ? hashtagsParam.split(',').map(id => id.trim()).filter(id => id.length > 0 && id !== '__no_hashtags__')
+      : [];
+  };
+  
+  const getInitialNoHashtags = () => {
+    if (!searchParams) {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('noHashtags') === 'true';
+      }
+      return false;
+    }
+    return searchParams.get('noHashtags') === 'true';
+  };
+  
+  const [selectedHashtagIds, setSelectedHashtagIds] = useState<string[]>(getInitialHashtagIds);
+  const [filterNoHashtags, setFilterNoHashtags] = useState(getInitialNoHashtags);
   const [pendingUploadData, setPendingUploadData] = useState<{
     file: File;
     title?: string;
@@ -47,12 +80,11 @@ export default function AdminBlogPage() {
     image?: string;
     thumbnailFile?: File;
   } | null>(null);
+  const prevHashtagIdsRef = useRef<string[]>(getInitialHashtagIds());
+  const hasInitializedRef = useRef(false);
+  const isUpdatingFromHandlerRef = useRef(false);
 
-  useEffect(() => {
-    fetchPosts();
-  }, [selectedHashtagIds, filterNoHashtags]);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
       // Build query parameters
@@ -81,7 +113,90 @@ export default function AdminBlogPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedHashtagIds, filterNoHashtags]);
+
+  // Sync hashtag filter from URL and trigger fetch in correct order
+  useEffect(() => {
+    const hashtagsParam = searchParams?.get('hashtags');
+    const noHashtagsParam = searchParams?.get('noHashtags') === 'true';
+    
+    const urlHashtagIds = hashtagsParam
+      ? hashtagsParam.split(',').map(id => id.trim()).filter(id => id.length > 0 && id !== '__no_hashtags__')
+      : [];
+    
+    // Only update if URL params differ from current state (avoid infinite loops)
+    const currentIdsString = JSON.stringify([...selectedHashtagIds].sort());
+    const urlIdsString = JSON.stringify([...urlHashtagIds].sort());
+    
+    const needsUpdate = currentIdsString !== urlIdsString || filterNoHashtags !== noHashtagsParam;
+    
+    if (needsUpdate) {
+      setSelectedHashtagIds(urlHashtagIds);
+      setFilterNoHashtags(noHashtagsParam);
+      prevHashtagIdsRef.current = urlHashtagIds;
+    }
+    
+    // Mark as initialized and fetch after state is updated
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      // Use the URL params directly for the first fetch to avoid double call
+      // This ensures we fetch with correct filter from the start
+      const fetchParams = new URLSearchParams();
+      if (noHashtagsParam) {
+        fetchParams.append('noHashtags', 'true');
+      } else if (urlHashtagIds.length > 0) {
+        fetchParams.append('hashtags', urlHashtagIds.join(','));
+      }
+      
+      // Fetch directly with URL params to avoid waiting for state update
+      fetch(`/api/blog/posts?${fetchParams.toString()}`)
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error('Failed to load blog posts');
+        })
+        .then(data => {
+          const postsData = data.posts || data;
+          setPosts(Array.isArray(postsData) ? postsData : []);
+        })
+        .catch(() => {
+          toast.error('Failed to load blog posts');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else if (needsUpdate && !isUpdatingFromHandlerRef.current) {
+      // For subsequent updates (navigation), fetch directly with URL params
+      // to avoid using stale state values
+      const fetchParams = new URLSearchParams();
+      if (noHashtagsParam) {
+        fetchParams.append('noHashtags', 'true');
+      } else if (urlHashtagIds.length > 0) {
+        fetchParams.append('hashtags', urlHashtagIds.join(','));
+      }
+      
+      setLoading(true);
+      fetch(`/api/blog/posts?${fetchParams.toString()}`)
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error('Failed to load blog posts');
+        })
+        .then(data => {
+          const postsData = data.posts || data;
+          setPosts(Array.isArray(postsData) ? postsData : []);
+        })
+        .catch(() => {
+          toast.error('Failed to load blog posts');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]); // Only sync when URL changes, not when state changes
 
   const handlePasswordVerify = async (password: string): Promise<boolean> => {
     try {
@@ -370,13 +485,106 @@ export default function AdminBlogPage() {
   };
 
   const handleHashtagFilterChange = (hashtagIds: string[]) => {
+    // Mark that we're updating from handler to prevent double fetch
+    isUpdatingFromHandlerRef.current = true;
+    
+    // Update state first
     setSelectedHashtagIds(hashtagIds);
     setFilterNoHashtags(false); // Clear no-hashtags filter when selecting hashtags
+    
+    // Update URL to reflect the filter state (for shareable links and persistence)
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.delete('noHashtags'); // Remove no-hashtags param when selecting hashtags
+    if (hashtagIds.length > 0) {
+      params.set('hashtags', hashtagIds.join(','));
+    } else {
+      params.delete('hashtags');
+    }
+    
+    // Update URL without page reload
+    const newUrl = params.toString() ? `/admin/blog?${params.toString()}` : '/admin/blog';
+    router.replace(newUrl, { scroll: false });
+    
+    // Trigger fetch with new values immediately
+    const fetchParams = new URLSearchParams();
+    if (hashtagIds.length > 0) {
+      fetchParams.append('hashtags', hashtagIds.join(','));
+    }
+    
+    setLoading(true);
+    fetch(`/api/blog/posts?${fetchParams.toString()}`)
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Failed to load blog posts');
+      })
+      .then(data => {
+        const postsData = data.posts || data;
+        setPosts(Array.isArray(postsData) ? postsData : []);
+      })
+      .catch(() => {
+        toast.error('Failed to load blog posts');
+      })
+      .finally(() => {
+        setLoading(false);
+        // Reset flag after fetch completes
+        setTimeout(() => {
+          isUpdatingFromHandlerRef.current = false;
+        }, 100);
+      });
   };
 
   const handleNoHashtagsFilterToggle = () => {
-    setFilterNoHashtags(!filterNoHashtags);
+    const newFilterNoHashtags = !filterNoHashtags;
+    // Mark that we're updating from handler to prevent double fetch
+    isUpdatingFromHandlerRef.current = true;
+    
+    // Update state first
+    setFilterNoHashtags(newFilterNoHashtags);
     setSelectedHashtagIds([]); // Clear hashtag selection when filtering no hashtags
+    
+    // Update URL to reflect the filter state
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.delete('hashtags'); // Remove hashtags param when filtering no hashtags
+    if (newFilterNoHashtags) {
+      params.set('noHashtags', 'true');
+    } else {
+      params.delete('noHashtags');
+    }
+    
+    // Update URL without page reload
+    const newUrl = params.toString() ? `/admin/blog?${params.toString()}` : '/admin/blog';
+    router.replace(newUrl, { scroll: false });
+    
+    // Trigger fetch with new values immediately
+    const fetchParams = new URLSearchParams();
+    if (newFilterNoHashtags) {
+      fetchParams.append('noHashtags', 'true');
+    }
+    
+    setLoading(true);
+    fetch(`/api/blog/posts?${fetchParams.toString()}`)
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Failed to load blog posts');
+      })
+      .then(data => {
+        const postsData = data.posts || data;
+        setPosts(Array.isArray(postsData) ? postsData : []);
+      })
+      .catch(() => {
+        toast.error('Failed to load blog posts');
+      })
+      .finally(() => {
+        setLoading(false);
+        // Reset flag after fetch completes
+        setTimeout(() => {
+          isUpdatingFromHandlerRef.current = false;
+        }, 100);
+      });
   };
 
   const uploadRef = useRef<HTMLDivElement>(null);
@@ -435,14 +643,16 @@ export default function AdminBlogPage() {
           disabled={uploading || deleting}
         />
         
-        <BlogList
-          posts={posts}
-          onUpdate={handleUpdateClick}
-          onDelete={handleDeleteClick}
-          uploading={uploading || deleting}
-          loading={loading}
-          emptyMessage="No blog posts yet. Upload one above to get started!"
-        />
+        <HashtagProvider>
+          <BlogList
+            posts={posts}
+            onUpdate={handleUpdateClick}
+            onDelete={handleDeleteClick}
+            uploading={uploading || deleting}
+            loading={loading}
+            emptyMessage="No blog posts yet. Upload one above to get started!"
+          />
+        </HashtagProvider>
       </motion.div>
 
       {/* Password Modal for Upload */}

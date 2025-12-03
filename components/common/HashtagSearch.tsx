@@ -7,6 +7,7 @@ import { IoSearchOutline, IoClose, IoPricetagsOutline } from 'react-icons/io5';
 interface HashtagSearchProps {
   onSelect?: (hashtag: Hashtag) => void;
   onSearchChange?: (searchTerm: string) => void;
+  onSearchSubmit?: (searchTerm: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -15,6 +16,7 @@ interface HashtagSearchProps {
 export function HashtagSearch({
   onSelect,
   onSearchChange,
+  onSearchSubmit,
   placeholder = 'Search hashtags by name...',
   className = '',
   disabled = false,
@@ -29,11 +31,12 @@ export function HashtagSearch({
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced search function
-  const searchHashtags = useCallback(async (term: string) => {
+  // Search function for suggestions (autocomplete) - called while typing with debounce
+  const searchHashtagsForSuggestions = useCallback(async (term: string) => {
     if (!term.trim()) {
       setSuggestions([]);
       setLoading(false);
+      setShowSuggestions(false);
       return;
     }
 
@@ -43,18 +46,21 @@ export function HashtagSearch({
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data.hashtags || []);
+        setShowSuggestions(true);
       } else {
         setSuggestions([]);
+        setShowSuggestions(true);
       }
     } catch (error) {
       console.error('Error searching hashtags:', error);
       setSuggestions([]);
+      setShowSuggestions(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Debounce search input
+  // Debounced search for suggestions while typing (autocomplete behavior)
   useEffect(() => {
     // Clear previous timer
     if (debounceTimerRef.current) {
@@ -64,9 +70,10 @@ export function HashtagSearch({
     // Set new timer
     debounceTimerRef.current = setTimeout(() => {
       if (searchTerm.trim()) {
-        searchHashtags(searchTerm);
+        searchHashtagsForSuggestions(searchTerm);
       } else {
         setSuggestions([]);
+        setShowSuggestions(false);
         setLoading(false);
       }
     }, 300); // 300ms debounce delay
@@ -77,9 +84,9 @@ export function HashtagSearch({
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [searchTerm, searchHashtags]);
+  }, [searchTerm, searchHashtagsForSuggestions]);
 
-  // Notify parent of search term changes
+  // Notify parent of search term changes (for display purposes only, not for triggering search)
   useEffect(() => {
     if (onSearchChange) {
       onSearchChange(searchTerm);
@@ -108,11 +115,23 @@ export function HashtagSearch({
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestions || suggestions.length === 0) {
-      if (e.key === 'Enter' && searchTerm.trim()) {
-        // Trigger search on Enter if no suggestions
-        searchHashtags(searchTerm);
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (showSuggestions && selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        // If a suggestion is selected, select it (this will trigger the main search)
+        handleSelectHashtag(suggestions[selectedIndex]);
+      } else if (searchTerm.trim()) {
+        // Otherwise, notify parent component to perform the main table search
+        if (onSearchSubmit) {
+          onSearchSubmit(searchTerm);
+        }
+        // Hide suggestions after submitting
+        setShowSuggestions(false);
       }
+      return;
+    }
+
+    if (!showSuggestions || suggestions.length === 0) {
       return;
     }
 
@@ -127,12 +146,6 @@ export function HashtagSearch({
         e.preventDefault();
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
         break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          handleSelectHashtag(suggestions[selectedIndex]);
-        }
-        break;
       case 'Escape':
         setShowSuggestions(false);
         setSelectedIndex(-1);
@@ -145,6 +158,10 @@ export function HashtagSearch({
     setSearchTerm(hashtag.name);
     setShowSuggestions(false);
     setSelectedIndex(-1);
+    // Trigger main table search when a suggestion is selected
+    if (onSearchSubmit) {
+      onSearchSubmit(hashtag.name);
+    }
     if (onSelect) {
       onSelect(hashtag);
     }
@@ -153,11 +170,13 @@ export function HashtagSearch({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    setShowSuggestions(true);
+    // Reset selected index when typing
     setSelectedIndex(-1);
+    // Suggestions will be shown automatically via the debounced search effect
   };
 
   const handleInputFocus = () => {
+    // Show suggestions if we have results
     if (searchTerm.trim() && suggestions.length > 0) {
       setShowSuggestions(true);
     }
@@ -171,6 +190,10 @@ export function HashtagSearch({
     searchInputRef.current?.focus();
     if (onSearchChange) {
       onSearchChange('');
+    }
+    // Clear the active search in parent component
+    if (onSearchSubmit) {
+      onSearchSubmit('');
     }
   };
 

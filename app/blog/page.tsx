@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { BlogLayout, BlogList, BlogFilterPanel } from '@/components/features/blog';
+import { BlogLayout, BlogList, BlogFilterPanel, HashtagProvider } from '@/components/features/blog';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 
 const POSTS_PER_PAGE = 9;
@@ -163,14 +163,16 @@ export default function BlogPage() {
         onNoHashtagsFilterToggle={handleNoHashtagsFilterToggle}
       />
 
-      <BlogList 
-        posts={posts} 
-        loading={loading}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        onPageChange={handlePageChange}
-      />
+      <HashtagProvider>
+        <BlogList 
+          posts={posts} 
+          loading={loading}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          onPageChange={handlePageChange}
+        />
+      </HashtagProvider>
     </BlogLayout>
   );
 }

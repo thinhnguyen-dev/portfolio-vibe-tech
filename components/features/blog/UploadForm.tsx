@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 
 interface UploadFormProps {
   onSubmit: (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File }) => Promise<void>;
@@ -8,6 +10,7 @@ interface UploadFormProps {
 }
 
 export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -165,9 +168,36 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
 
   return (
     <div className="p-4 sm:p-6 border border-text-secondary/20 rounded-lg bg-background/50">
-      <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4">Upload New Blog Post</h2>
+      {/* Header with Collapse/Expand Button */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground">Upload New Blog Post</h2>
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground hover:bg-text-secondary/10 rounded-md transition-colors"
+          aria-label={isExpanded ? 'Collapse form' : 'Expand form'}
+          aria-expanded={isExpanded}
+        >
+          <span className="hidden sm:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
+          {isExpanded ? (
+            <IoChevronUp size={20} className="text-accent" />
+          ) : (
+            <IoChevronDown size={20} className="text-accent" />
+          )}
+        </button>
+      </div>
       
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+      {/* Collapsible Form Content */}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.form
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            onSubmit={handleSubmit}
+            className="space-y-4 sm:space-y-6 overflow-hidden"
+          >
         <div>
           <label htmlFor="file-input" className="block text-sm font-medium mb-2 text-foreground">
             Select ZIP Archive (.zip) containing the Markdown File (.md) and related images 
@@ -333,7 +363,9 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
             'Upload'
           )}
         </button>
-      </form>
+      </motion.form>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

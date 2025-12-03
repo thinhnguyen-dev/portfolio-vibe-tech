@@ -16,10 +16,10 @@ import {
   where,
   Timestamp,
   QueryDocumentSnapshot,
+  DocumentSnapshot,
   runTransaction,
   arrayUnion,
   arrayRemove,
-  increment,
 } from 'firebase/firestore';
 import { generateUUID } from './blog';
 
@@ -348,23 +348,34 @@ export async function updateBlogHashtags(
   const db = getFirebaseDb();
   const BLOG_COLLECTION = 'blogPosts';
   
-  // Get current blog document to find old hashtag IDs
   const blogRef = doc(db, BLOG_COLLECTION, blogId);
-  const blogDoc = await getDoc(blogRef);
-  
-  if (!blogDoc.exists()) {
-    throw new Error(`Blog with ID "${blogId}" not found`);
-  }
-  
-  const oldHashtagIds = blogDoc.data()?.hashtagIds || [];
   const newHashtagIds = hashtagIds || [];
   
-  // Find added and removed hashtag IDs
-  const addedHashtagIds = newHashtagIds.filter(id => !oldHashtagIds.includes(id));
-  const removedHashtagIds = oldHashtagIds.filter(id => !newHashtagIds.includes(id));
-  
-  // Use transaction to update both blog and hashtag documents atomically
+  // Use transaction to read blog document and update both blog and hashtag documents atomically
+  // All reads must be inside the transaction and must happen BEFORE any writes
   await runTransaction(db, async (transaction) => {
+    const blogDoc = await transaction.get(blogRef);
+    
+    if (!blogDoc.exists()) {
+      throw new Error(`Blog with ID "${blogId}" not found`);
+    }
+    
+    const oldHashtagIds = blogDoc.data()?.hashtagIds || [];
+    
+    // Find added and removed hashtag IDs
+    const addedHashtagIds = newHashtagIds.filter((id: string) => !oldHashtagIds.includes(id));
+    const removedHashtagIds = oldHashtagIds.filter((id: string) => !newHashtagIds.includes(id));
+    
+    // Combine all hashtag IDs that need to be read (both added and removed)
+    const allHashtagIdsToRead = [...new Set([...addedHashtagIds, ...removedHashtagIds])];
+    const hashtagDocs = new Map<string, DocumentSnapshot>();
+    
+    for (const hashtagId of allHashtagIdsToRead) {
+      const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
+      const hashtagDoc = await transaction.get(hashtagRef);
+      hashtagDocs.set(hashtagId, hashtagDoc);
+    }
+    
     // Update blog document
     transaction.update(blogRef, {
       hashtagIds: newHashtagIds,
@@ -373,35 +384,39 @@ export async function updateBlogHashtags(
     
     // Update hashtag documents - add blog to new hashtags
     for (const hashtagId of addedHashtagIds) {
-      const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
-      const hashtagDoc = await transaction.get(hashtagRef);
+      const hashtagDoc = hashtagDocs.get(hashtagId);
       
-      if (hashtagDoc.exists()) {
+      if (hashtagDoc && hashtagDoc.exists()) {
         const currentLinkedBlogIds = hashtagDoc.data()?.linkedBlogIds || [];
         if (!currentLinkedBlogIds.includes(blogId)) {
+          const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
           transaction.update(hashtagRef, {
             linkedBlogIds: arrayUnion(blogId),
-            blogCount: increment(1),
             updatedAt: Timestamp.now(),
           });
         }
+      } else {
+        // Log warning if hashtag doesn't exist (shouldn't happen in normal flow)
+        console.warn(`Hashtag with ID "${hashtagId}" not found when trying to add blog "${blogId}"`);
       }
     }
     
     // Update hashtag documents - remove blog from old hashtags
     for (const hashtagId of removedHashtagIds) {
-      const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
-      const hashtagDoc = await transaction.get(hashtagRef);
+      const hashtagDoc = hashtagDocs.get(hashtagId);
       
-      if (hashtagDoc.exists()) {
+      if (hashtagDoc && hashtagDoc.exists()) {
         const currentLinkedBlogIds = hashtagDoc.data()?.linkedBlogIds || [];
         if (currentLinkedBlogIds.includes(blogId)) {
+          const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
           transaction.update(hashtagRef, {
             linkedBlogIds: arrayRemove(blogId),
-            blogCount: increment(-1),
             updatedAt: Timestamp.now(),
           });
         }
+      } else {
+        // Log warning if hashtag doesn't exist (might happen if hashtag was deleted)
+        console.warn(`Hashtag with ID "${hashtagId}" not found when trying to remove blog "${blogId}"`);
       }
     }
   });

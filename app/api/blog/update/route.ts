@@ -251,6 +251,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Update blog-hashtag relationships FIRST (before updating blog metadata)
+    // This ensures we can read the old hashtagIds to determine what was added/removed
+    if (shouldUpdateHashtags) {
+      try {
+        await updateBlogHashtags(uuid, hashtagIds || []);
+        console.log(`Successfully updated blog-hashtag relationships for blog ${uuid} with hashtags:`, hashtagIds);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to update blog-hashtag relationships:', {
+          blogId: uuid,
+          hashtagIds,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        // Don't fail the entire request, but log the error for debugging
+        // The blog's hashtagIds will still be updated by saveBlogPostMetadata below
+      }
+    }
+
     // Update metadata in Firestore
     const metadataUpdate = {
       title: finalTitle,
@@ -274,16 +293,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Failed to update metadata in Firestore:', error);
       // Continue even if metadata update fails
-    }
-    
-    // Update blog-hashtag relationships if hashtagIds were provided
-    if (shouldUpdateHashtags) {
-      try {
-        await updateBlogHashtags(uuid, hashtagIds || []);
-      } catch (error) {
-        console.error('Failed to update blog-hashtag relationships:', error);
-        // Continue even if relationship update fails
-      }
     }
 
     // Also update local filesystem as backup (optional)
