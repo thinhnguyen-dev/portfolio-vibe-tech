@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { BlogLayout, BlogList, BlogFilterPanel, HashtagProvider } from '@/components/features/blog';
 import type { BlogPostMetadata } from '@/lib/blog/utils';
 
 const POSTS_PER_PAGE = 9;
 
-export default function BlogPage() {
+function BlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState<BlogPostMetadata[]>([]);
@@ -174,6 +174,20 @@ export default function BlogPage() {
         />
       </HashtagProvider>
     </BlogLayout>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={
+      <BlogLayout title="Blog">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-foreground/60">Loading...</div>
+        </div>
+      </BlogLayout>
+    }>
+      <BlogPageContent />
+    </Suspense>
   );
 }
 

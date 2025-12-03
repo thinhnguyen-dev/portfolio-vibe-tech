@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -23,7 +23,7 @@ const itemVariants = {
   },
 };
 
-export default function AdminBlogPage() {
+function AdminBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [uploading, setUploading] = useState(false);
@@ -741,6 +741,24 @@ export default function AdminBlogPage() {
         toastClassName="min-w-[280px] sm:min-w-[320px]"
       />
     </BlogLayout>
+  );
+}
+
+export default function AdminBlogPage() {
+  return (
+    <Suspense fallback={
+      <BlogLayout
+        title="Admin - Blog Management"
+        description="Upload new blog posts or update existing ones"
+        backLink={{ href: '/blog', label: 'Back to Blog' }}
+      >
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-foreground/60">Loading...</div>
+        </div>
+      </BlogLayout>
+    }>
+      <AdminBlogPageContent />
+    </Suspense>
   );
 }
 
