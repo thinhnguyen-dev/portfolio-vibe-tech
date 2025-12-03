@@ -192,7 +192,7 @@ export async function updateHashtag(
 }
 
 /**
- * Delete a hashtag
+ * Delete a hashtag and remove it from all linked blogs
  * @param hashtagId - ID of the hashtag to delete
  */
 export async function deleteHashtag(hashtagId: string): Promise<void> {
@@ -205,6 +205,32 @@ export async function deleteHashtag(hashtagId: string): Promise<void> {
     throw new Error(`Hashtag with ID "${hashtagId}" not found`);
   }
   
+  // Get the BLOG_COLLECTION name from blog.ts
+  // We'll import it or use the constant directly
+  const BLOG_COLLECTION = 'blogPosts';
+  
+  // Query all blogs that have this hashtagId in their hashtagIds array
+  const blogsRef = collection(db, BLOG_COLLECTION);
+  const blogsQuery = query(
+    blogsRef,
+    where('hashtagIds', 'array-contains', hashtagId)
+  );
+  
+  const blogsSnapshot = await getDocs(blogsQuery);
+  
+  // Remove the hashtagId from all linked blogs
+  const updatePromises = blogsSnapshot.docs.map((blogDoc) => {
+    const blogRef = doc(db, BLOG_COLLECTION, blogDoc.id);
+    return updateDoc(blogRef, {
+      hashtagIds: arrayRemove(hashtagId),
+      modifiedAt: Timestamp.now(),
+    });
+  });
+  
+  // Wait for all blog updates to complete
+  await Promise.all(updatePromises);
+  
+  // Finally, delete the hashtag document
   await deleteDoc(hashtagRef);
 }
 
