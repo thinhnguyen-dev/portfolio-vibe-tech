@@ -253,10 +253,17 @@ export async function POST(request: NextRequest) {
 
     // Update blog-hashtag relationships FIRST (before updating blog metadata)
     // This ensures we can read the old hashtagIds to determine what was added/removed
+    // updateBlogHashtags handles everything atomically in a single transaction:
+    // 1. Creates missing hashtags with generated IDs
+    // 2. Adds hashtagIds to blog's hashtagIds array
+    // 3. Adds blogId to hashtag's linkedBlogIds array (including newly created ones)
+    let resolvedHashtagIds: string[] = [];
     if (shouldUpdateHashtags) {
       try {
-        await updateBlogHashtags(uuid, hashtagIds || []);
-        console.log(`Successfully updated blog-hashtag relationships for blog ${uuid} with hashtags:`, hashtagIds);
+        // updateBlogHashtags resolves identifiers, creates missing hashtags, and updates relationships
+        // All in a single atomic transaction
+        resolvedHashtagIds = await updateBlogHashtags(uuid, hashtagIds || []);
+        console.log(`Successfully updated blog-hashtag relationships for blog ${uuid} with hashtags:`, resolvedHashtagIds);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Failed to update blog-hashtag relationships:', {
@@ -266,17 +273,22 @@ export async function POST(request: NextRequest) {
           stack: error instanceof Error ? error.stack : undefined,
         });
         // Don't fail the entire request, but log the error for debugging
-        // The blog's hashtagIds will still be updated by saveBlogPostMetadata below
+        // Use original hashtagIds for metadata update (will be resolved later if needed)
+        resolvedHashtagIds = hashtagIds || [];
       }
     }
 
     // Update metadata in Firestore
-    const metadataUpdate = {
+    const metadataUpdate: {
+      title: string;
+      description: string;
+      thumbnail: string;
+      publishDate?: Date;
+      hashtagIds?: string[];
+    } = {
       title: finalTitle,
       description: finalDescription,
       thumbnail: thumbnailURL,
-      publishDate: publishDate,
-      hashtagIds: hashtagIds || [],
     };
     
     if (publishDate !== undefined) {
@@ -284,8 +296,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Only include hashtagIds if explicitly provided (can be empty array)
+    // Use resolved IDs (actual UUIDs) instead of original identifiers (which may include names)
     if (shouldUpdateHashtags) {
-      metadataUpdate.hashtagIds = hashtagIds || [];
+      metadataUpdate.hashtagIds = resolvedHashtagIds.length > 0 ? resolvedHashtagIds : (hashtagIds || []);
     }
     
     try {

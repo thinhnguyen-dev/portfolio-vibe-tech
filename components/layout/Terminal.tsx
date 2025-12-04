@@ -137,8 +137,12 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isRoot, setIsRoot] = useState(false);
   const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
+  const [isAdminPasswordPrompt, setIsAdminPasswordPrompt] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [commandAccepted, setCommandAccepted] = useState(false); // Track if current command was accepted via Tab
+
+  // Admin session storage key (matches admin layout)
+  const ADMIN_SESSION_KEY = 'admin_auth_verified';
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -548,6 +552,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     setIsExecuting(false);
     setIsRoot(false);
     setIsPasswordPrompt(false);
+    setIsAdminPasswordPrompt(false);
     setPasswordInput('');
     
     // Reset window state
@@ -709,7 +714,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const availableCommands = [
     'help', 'ls', 'pwd', 'cd', 'uname', 'echo', 'clear',
     'whoami', 'reboot', 'github', 'blog', 'theme',
-    'sudo', 'su', 'logout', 'exit'
+    'sudo', 'su', 'logout', 'exit', 'admin'
   ];
 
   // Get current path for pwd command
@@ -964,6 +969,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
             '  blog       - Open blog page',
             '  theme      - Toggle between light and dark theme',
             '  sudo su    - Switch to root user (requires password)',
+            '  admin      - Access admin blog (requires admin password)',
             '  logout     - Switch back to normal user (if root)',
             '  exit       - Close the terminal',
           ]
@@ -1260,6 +1266,53 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
         }
         break;
 
+      case 'admin':
+        // Check if already authenticated in this session
+        if (typeof window !== 'undefined') {
+          const isAdminAuthenticated = sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+          
+          if (isAdminAuthenticated) {
+            // Already authenticated - redirect immediately
+            output.push({
+              type: 'output' as const,
+              content: 'Already authenticated. Redirecting to admin panel...'
+            });
+            setCommandHistory(prev => {
+              const newHistory: CommandOutput[] = [...prev, ...output];
+              return limitHistory(newHistory);
+            });
+            setCommandHistoryList(prev => [...prev, trimmedCommand]);
+            setHistoryIndex(-1);
+            
+            // Redirect after a short delay
+            setTimeout(() => {
+              router.push('/admin/blog');
+            }, 500);
+            return;
+          }
+        }
+        
+        // Not authenticated - prompt for password
+        // Add command to history first
+        setCommandHistory(prev => {
+          const newHistory: CommandOutput[] = [...prev, ...output];
+          return limitHistory(newHistory);
+        });
+        setCommandHistoryList(prev => [...prev, trimmedCommand]);
+        setHistoryIndex(-1);
+        
+        // Trigger admin password prompt
+        setIsAdminPasswordPrompt(true);
+        setPasswordInput('');
+        setCommandHistory(prev => {
+          const newHistory: CommandOutput[] = [
+            ...prev,
+            { type: 'output' as const, content: 'Admin password:' }
+          ];
+          return limitHistory(newHistory);
+        });
+        return;
+
       case 'logout':
         if (isRoot) {
           // Switch back to normal user
@@ -1309,7 +1362,133 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
     setHistoryIndex(-1);
   };
 
-  // Handle password submission
+  // Handle admin password submission (async - verifies with API)
+  const handleAdminPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Prevent command execution during verification
+    if (isExecuting) {
+      return;
+    }
+    
+    setIsExecuting(true);
+    const passwordToVerify = passwordInput;
+    
+    // Clear password input immediately for security
+    setPasswordInput('');
+    
+    // Add "Verifying..." message
+    setCommandHistory(prev => {
+      const newHistory: CommandOutput[] = [
+        ...prev,
+        { type: 'output' as const, content: 'Verifying...' }
+      ];
+      return limitHistory(newHistory);
+    });
+    
+    try {
+      const response = await fetch('/api/blog/verify-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: passwordToVerify }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Store authentication state in sessionStorage
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+          }
+          
+          // Close admin password prompt
+          setIsAdminPasswordPrompt(false);
+          
+          // Replace "Verifying..." with success message
+          setCommandHistory(prev => {
+            const newHistory = [...prev];
+            const lastIndex = newHistory.length - 1;
+            if (lastIndex >= 0 && newHistory[lastIndex].type === 'output' && newHistory[lastIndex].content === 'Verifying...') {
+              newHistory[lastIndex] = { type: 'output' as const, content: 'Authentication successful. Redirecting to admin panel...' };
+            } else {
+              newHistory.push({ type: 'output' as const, content: 'Authentication successful. Redirecting to admin panel...' });
+            }
+            return limitHistory(newHistory);
+          });
+          
+          // Redirect to admin panel after a short delay
+          setTimeout(() => {
+            router.push('/admin/blog');
+          }, 500);
+        } catch (storageError) {
+          console.error('Error storing authentication:', storageError);
+          // Still redirect even if storage failed
+          setIsAdminPasswordPrompt(false);
+          setCommandHistory(prev => {
+            const newHistory = [...prev];
+            const lastIndex = newHistory.length - 1;
+            if (lastIndex >= 0 && newHistory[lastIndex].type === 'output' && newHistory[lastIndex].content === 'Verifying...') {
+              newHistory[lastIndex] = { type: 'output' as const, content: 'Authentication successful. Redirecting to admin panel...' };
+            } else {
+              newHistory.push({ type: 'output' as const, content: 'Authentication successful. Redirecting to admin panel...' });
+            }
+            return limitHistory(newHistory);
+          });
+          setTimeout(() => {
+            router.push('/admin/blog');
+          }, 500);
+        }
+      } else {
+        // Incorrect password - show error and close password prompt
+        setIsAdminPasswordPrompt(false);
+        
+        // Replace "Verifying..." with error message
+        setCommandHistory(prev => {
+          const newHistory = [...prev];
+          const lastIndex = newHistory.length - 1;
+          if (lastIndex >= 0 && newHistory[lastIndex].type === 'output' && newHistory[lastIndex].content === 'Verifying...') {
+            newHistory[lastIndex] = { type: 'error' as const, content: 'Sorry, incorrect admin password!' };
+          } else {
+            newHistory.push({ type: 'error' as const, content: 'Sorry, incorrect admin password!' });
+          }
+          return limitHistory(newHistory);
+        });
+        
+        // Focus input so user can try again
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 50);
+      }
+        } catch {
+          // Network or other error
+          setIsAdminPasswordPrompt(false);
+      setCommandHistory(prev => {
+        const newHistory = [...prev];
+        const lastIndex = newHistory.length - 1;
+        if (lastIndex >= 0 && newHistory[lastIndex].type === 'output' && newHistory[lastIndex].content === 'Verifying...') {
+          newHistory[lastIndex] = { type: 'error' as const, content: 'Error verifying password. Please try again.' };
+        } else {
+          newHistory.push({ type: 'error' as const, content: 'Error verifying password. Please try again.' });
+        }
+        return limitHistory(newHistory);
+      });
+      
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 50);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // Handle sudo password submission
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const PASSWORD = '1234';
@@ -1362,7 +1541,13 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If password prompt is active, handle password submission
+    // If admin password prompt is active, handle admin password submission
+    if (isAdminPasswordPrompt) {
+      await handleAdminPasswordSubmit(e);
+      return;
+    }
+    
+    // If sudo password prompt is active, handle password submission
     if (isPasswordPrompt) {
       handlePasswordSubmit(e);
       return;
@@ -1889,7 +2074,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                   ))}
 
                   {/* Input Line - Two-line layout */}
-                  {!isPasswordPrompt ? (
+                  {!isPasswordPrompt && !isAdminPasswordPrompt ? (
                     <div className='flex items-center'>
                       <div className='w-4 h-[26px] rounded-l-md border-l border-t border-b border-accent'></div>
                       <form onSubmit={handleSubmit} className="flex flex-col gap-0.5 w-full">
@@ -1978,7 +2163,11 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                         onChange={(e) => setPasswordInput(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Escape') {
-                            setIsPasswordPrompt(false);
+                            if (isAdminPasswordPrompt) {
+                              setIsAdminPasswordPrompt(false);
+                            } else {
+                              setIsPasswordPrompt(false);
+                            }
                             setPasswordInput('');
                             setCurrentInput('');
                             // Add cancellation message
@@ -1991,6 +2180,7 @@ export const Terminal: React.FC<TerminalProps> = ({ isOpen, onClose }) => {
                             });
                           }
                         }}
+                        disabled={isExecuting}
                         autoFocus
                         autoComplete="off"
                         spellCheck="false"
