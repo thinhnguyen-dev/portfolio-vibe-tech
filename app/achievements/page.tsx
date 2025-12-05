@@ -46,8 +46,8 @@ export default function Achievements() {
   const certificationsRef = useRef<HTMLElement>(null);
   
   // Use viewport check - will trigger immediately if element is in view on mount
-  const achievementsInView = useInView(achievementsRef, { once: true, amount: 0.1 });
-  const certificationsInView = useInView(certificationsRef, { once: true, amount: 0.1 });
+  const achievementsInView = useInView(achievementsRef, { initial: true, once: true, amount: "some" });
+  const certificationsInView = useInView(certificationsRef, { once: true, amount: "some" });
 
   // Achievements data in chronological order (oldest to newest)
   const achievements: TimelineItem[] = [
@@ -94,7 +94,7 @@ export default function Achievements() {
         initial="hidden"
         animate={achievementsInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         {/* Section Header */}
         <SectionHeader
@@ -125,7 +125,7 @@ export default function Achievements() {
         initial="hidden"
         animate={certificationsInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: "some" }}
       >
         <SectionHeader
           title="certifications"

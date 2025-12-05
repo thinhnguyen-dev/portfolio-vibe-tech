@@ -5,7 +5,6 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Button, TypingText } from '@/components/common';
 import { HeroLogo, DotsPattern, StatusBar, Quote } from '@/components/features/home';
 import { Contact } from '@/components/features/contact';
-import { FaCode } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { MdOutlineReadMore } from 'react-icons/md';
 
@@ -40,9 +39,9 @@ export default function Home() {
   const router = useRouter();
   // Use useInView to reliably detect when elements are in view, even on navigation
   // The hook will re-trigger on every component mount (navigation), but 'once: true' prevents re-animation while on the page
-  const heroImageInView = useInView(heroImageRef, { once: true, amount: 0.1 });
-  const heroLogoInView = useInView(heroLogoRef, { once: true, amount: 0.1 });
-  const dotsPatternInView = useInView(dotsPatternRef, { once: true, amount: 0.1 });
+  const heroImageInView = useInView(heroImageRef, { once: true, amount: "some" });
+  const heroLogoInView = useInView(heroLogoRef, { once: true, amount: "some" });
+  const dotsPatternInView = useInView(dotsPatternRef, { once: true, amount: "some" });
 
   const handleTypingComplete = () => {
     // Show subheading when first sentence completes typing (before backspacing starts)
@@ -146,7 +145,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={heroImageInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 30, scale: 0.95 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true, amount: 0.1 }}
+              viewport={{ once: true, amount: "some" }}
               transition={{ 
                 duration: 0.6, 
                 delay: 0.3,
@@ -196,7 +195,7 @@ export default function Home() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={heroLogoInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.1 }}
+                viewport={{ once: true, amount: "some" }}
                 transition={{ duration: 0.5, delay: 0.5 }}
                 whileHover={{ 
                   scale: 1.1,
@@ -214,7 +213,7 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={dotsPatternInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true, amount: 0.1 }}
+                viewport={{ once: true, amount: "some" }}
                 transition={{ duration: 0.5, delay: 0.7 }}
                 whileHover={{ 
                   scale: 1.15,

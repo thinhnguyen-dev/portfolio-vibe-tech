@@ -589,8 +589,8 @@ function AdminBlogPageContent() {
 
   const uploadRef = useRef<HTMLDivElement>(null);
   const postsRef = useRef<HTMLDivElement>(null);
-  const uploadInView = useInView(uploadRef, { once: true, amount: 0.1 });
-  const postsInView = useInView(postsRef, { once: true, amount: 0.1 });
+  const uploadInView = useInView(uploadRef, { initial: true, once: true, amount: "some" });
+  const postsInView = useInView(postsRef, { once: true, amount: "some" });
 
   return (
     <BlogLayout
@@ -606,7 +606,7 @@ function AdminBlogPageContent() {
         initial="hidden"
         animate={uploadInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         <UploadForm
           onSubmit={handleUpload}
@@ -621,7 +621,7 @@ function AdminBlogPageContent() {
         initial="hidden"
         animate={postsInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground">Existing Blog Posts</h2>

@@ -57,7 +57,7 @@ export function BlogList({
   onPageChange,
 }: BlogListProps) {
   const listRef = useRef<HTMLDivElement>(null);
-  const listInView = useInView(listRef, { once: true, amount: 0.1 });
+  const listInView = useInView(listRef, { initial: true, once: true, amount: "some" });
   const { fetchHashtags } = useHashtags();
 
   // Collect all unique hashtag IDs from all posts
@@ -111,7 +111,7 @@ export function BlogList({
         initial="hidden"
         animate={listInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         {posts.map((post, index) => (
           <motion.div key={post.blogId || post.slug || `post-${index}`} variants={cardVariants}>

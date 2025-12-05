@@ -46,7 +46,7 @@ export function BlogLayout({
   headerAction,
 }: BlogLayoutProps) {
   const headerRef = useRef<HTMLDivElement>(null);
-  const headerInView = useInView(headerRef, { once: true, amount: 0.1 });
+  const headerInView = useInView(headerRef, { initial: true, once: true, amount: "some" });
 
   return (
     <div className='min-h-screen flex flex-col items-center'>
@@ -57,7 +57,7 @@ export function BlogLayout({
         initial="hidden"
         animate={headerInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         <motion.div className="mb-8" variants={itemVariants}>
           <div className="mb-4">

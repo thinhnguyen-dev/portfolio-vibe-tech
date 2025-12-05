@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/common';
-import { FaHome, FaCode } from 'react-icons/fa';
+import { FaHome } from 'react-icons/fa';
 
 export default function NotFound() {
   return (

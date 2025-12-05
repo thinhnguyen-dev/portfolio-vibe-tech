@@ -68,7 +68,7 @@ export default function AdminHashtagsPage() {
   const passwordVerificationSucceeded = useRef(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
-  const tableInView = useInView(tableRef, { once: true, amount: 0.1 });
+  const tableInView = useInView(tableRef, { initial: true, once: true, amount: "some" });
 
   const fetchHashtags = useCallback(async () => {
     try {
@@ -460,7 +460,7 @@ export default function AdminHashtagsPage() {
         initial="hidden"
         animate={tableInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-foreground">

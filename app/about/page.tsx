@@ -1,10 +1,10 @@
 'use client';
 
+import { SectionHeader } from '@/components/common';
+import { BioText, FactsGrid, SkillBlock } from '@/components/features/about';
+import { Contact } from '@/components/features/contact';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
-import { SectionHeader } from '@/components/common';
-import { BioText, SkillBlock, FactsGrid } from '@/components/features/about';
-import { Contact } from '@/components/features/contact';
 
 // Animation variants for About page
 const containerVariants = {
@@ -34,9 +34,9 @@ export default function About() {
   const skillsRef = useRef(null);
   const factsRef = useRef(null);
   
-  const aboutInView = useInView(aboutRef, { once: true, amount: 0.2 });
-  const skillsInView = useInView(skillsRef, { once: true, amount: 0.2 });
-  const factsInView = useInView(factsRef, { once: true, amount: 0.2 });
+  const aboutInView = useInView(aboutRef, { initial: true, once: true, amount: "some" });
+  const skillsInView = useInView(skillsRef, { once: true, amount: "some" });
+  const factsInView = useInView(factsRef, { once: true, amount: "some" });
 
   return (
     <main className="min-h-screen flex flex-col items-center">
@@ -49,7 +49,7 @@ export default function About() {
         initial="hidden"
         animate={aboutInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: "some" }}
       >
         {/* Section Header */}
         <SectionHeader
@@ -101,7 +101,7 @@ export default function About() {
         initial="hidden"
         animate={skillsInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: "some" }}
       >
         {/* Section Header */}
         <SectionHeader
@@ -146,7 +146,7 @@ export default function About() {
         initial="hidden"
         animate={factsInView ? "visible" : "hidden"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: "some" }}
       >
         {/* Section Header */}
         <SectionHeader

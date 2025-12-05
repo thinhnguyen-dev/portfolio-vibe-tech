@@ -66,7 +66,7 @@ export const Timeline: React.FC<TimelineProps> = ({
                 ? {
                     initial: { opacity: 0, x: -20 },
                     whileInView: { opacity: 1, x: 0 },
-                    viewport: { once: true, amount: 0.2 },
+                    viewport: { once: true, amount: "some" },
                     transition: { duration: 0.4, delay: index * 0.1 },
                   }
                 : {})}
@@ -127,7 +127,7 @@ export const Timeline: React.FC<TimelineProps> = ({
         initial="hidden"
         animate={animateOnLoad ? "visible" : "visible"}
         whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        viewport={{ once: true, amount: "some" }}
       >
         {timelineContent}
       </motion.div>
