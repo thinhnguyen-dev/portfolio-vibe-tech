@@ -45,6 +45,10 @@ export default function BlogPostPage() {
     }
   }, [searchParams]);
 
+  // Get language from URL search params or default to 'vi'
+  const languageParam = searchParams?.get('language');
+  const language = languageParam === 'en' ? 'en' : 'vi';
+
   useEffect(() => {
     const fetchContent = async () => {
       if (!slug || typeof slug !== 'string') {
@@ -56,7 +60,7 @@ export default function BlogPostPage() {
       try {
         setLoading(true);
         setNotFound(false);
-        const response = await fetch(`/api/blog/content/${slug}`);
+        const response = await fetch(`/api/blog/content/${slug}?language=${language}`);
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -98,7 +102,7 @@ export default function BlogPostPage() {
     };
 
     fetchContent();
-  }, [slug, router]);
+  }, [slug, router, language]);
 
   // Reset ID generator when content changes
   useEffect(() => {

@@ -94,7 +94,7 @@ The application uses `Apache Commons Collections 3.1`, an old library containing
 
 At the `/login` and `/home` endpoints, the cookie processing is affected by deserialization without adequate security checks. The cookie processing code is shown below:
 
-![serial_deserial.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fserial_deserial.png?alt=media&token=b31201c2-087a-47e4-a4ac-b28f97cfae05)
+![serial_deserial.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fserial_deserial.png?alt=media&token=e950f5ce-10b0-4bd1-88ae-0ed8bfa5bd4d)
 
 <div align="center">
 
@@ -103,7 +103,7 @@ _Serialize and Deserialize methods with base64 encoding_
 </div>
 <br><br>
 
-![login_home.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Flogin_home.png?alt=media&token=e06325a7-f05f-4e11-a391-2986f0e03872)
+![login_home.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Flogin_home.png?alt=media&token=0a179a7c-923d-4dd0-a873-85370c0ea360)
 
 <div align="center">
 
@@ -137,7 +137,7 @@ In the context of **Insecure Deserialization**, a **gadget-chain** is a sequence
 
 ## **4.2. Detailed Analysis**
 
-![gadget_chain.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fgadget_chain.png?alt=media&token=7f8bdd49-00d4-457c-af16-6b670281ff89)
+![gadget_chain.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fgadget_chain.png?alt=media&token=5a4bb86d-c5bd-4c8d-85cb-9ee765505b0d)
 
 <div align="center">
 
@@ -146,7 +146,7 @@ _CommonsCollections5 Gadget-Chain_
 </div>
 <br></br>
 
-![code_gen_payload.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fcode_gen_payload.png?alt=media&token=de491fac-4bf7-4d1d-9c4c-ebddaaadba5d)
+![code_gen_payload.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fcode_gen_payload.png?alt=media&token=03050e62-4bca-4198-8632-4876182e8e44)
 
 <div align="center">
 
@@ -158,28 +158,28 @@ _Code that generates the payload_
 
 ### #1 Command Input
 
-![command.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fcommand.png?alt=media&token=e876da35-fc2a-4c89-8448-a6e0b12e9dcb)
+![command.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fcommand.png?alt=media&token=76f7c2dd-a43a-477a-b23b-298684979ed8)
 
 The `execArgs` object is created with the String type with the value being the `command` provided by the user, depending on the command the payload creator wants to execute.
 
-![debug command](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_command.png?alt=media&token=d01dba23-03ad-49d9-b85f-47715b2e8c0f)
+![debug command](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_command.png?alt=media&token=687f16e2-148c-4d6b-96c7-6d2b6afc0f65)
 
 ---
 
 ### #2 Initializing the Transformer
 
-![fake_transform.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Ffake_transform.png?alt=media&token=ef48d240-7090-4956-b734-237679b849e4)
+![fake_transform.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Ffake_transform.png?alt=media&token=6b6180a3-fbbd-44f6-a14e-96e96b85fb87)
 `Transformer` is an interface with the method `transform(Object input)`, which takes an input value and returns a different value. Here the `transformerChain` object is initialized as a `ChainedTransformer` which is a subclass of Transformer, containing a `ConstantTransformer(1)`. `ChainedTransformer` is a special Transformer that takes a list of `Transformer[]` and calls each Transformer sequentially.
 
 Initially, we only initialize `ConstantTransformer(1)` because it only returns 1, making it harmless and avoiding premature payload execution. We'll replace it with the actual payload later.
 
-![debug_fake_chain.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_fake_chain.png?alt=media&token=8cad09e9-33c9-4eba-8351-9039b3d69582)
+![debug_fake_chain.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_fake_chain.png?alt=media&token=b853b029-bd4c-4048-9f9b-3fc3ec943948)
 
 ---
 
 ### #3 The Real Transformer Chain
 
-![real_transformer.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Freal_transformer.png?alt=media&token=4fea40a7-d2ee-4b14-9aa0-9a6d4ac2988c)
+![real_transformer.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Freal_transformer.png?alt=media&token=6faeff8e-b591-46c9-8bbb-3fb661491519)
 The `transformers` object is initialized as an array of Transformer[] with 5 component Transformers, in sequence:
 
 ```java
@@ -188,7 +188,7 @@ new ConstantTransformer(Runtime.class)
 
 `ConstantTransformer` is a Transformer that returns a specific value, in this case it returns `Runtime.class`
 
-![debug_runtimeclass.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_runtimeclass.png?alt=media&token=3fec0221-220b-4832-badb-2df472631dca)
+![debug_runtimeclass.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_runtimeclass.png?alt=media&token=8e132dd5-7c1f-4d12-87bd-53afc68a87fb)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -253,7 +253,7 @@ new Object[] { "getRuntime", new Class[0] }
 
 After running through this `InvokerTransformer`, it returns `Runtime.getRuntime()` to prepare to call the `exec` method.
 
-![debug_getruntime.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_getruntime.png?alt=media&token=d303fcce-8cd5-470d-97f1-ba6572682607)
+![debug_getruntime.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_getruntime.png?alt=media&token=06d10570-df9d-45e4-b8fa-5a26e9f01ece)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -266,7 +266,7 @@ new InvokerTransformer("invoke", new Class[] {
 
 The function and structure are still the same as the `InvokerTransformer` above. This time, it has the task of executing `Runtime.getRuntime()` to get the `Runtime` object.
 
-![debug_invoke.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_invoke.png?alt=media&token=0806500c-dae0-45f8-a4d7-0b9dbd88a4a5)
+![debug_invoke.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_invoke.png?alt=media&token=e3dfd5d5-ac35-47d7-b822-97e7e9065f65)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -276,7 +276,7 @@ new InvokerTransformer("exec", new Class[] { String.class }, execArgs)
 
 With the final `InvokerTransformer`, it calls the `exec()` method of the `Runtime` object (`Runtime().getRuntime().exec(command)` or `Runtime().exec(command)`) to execute the provided command.
 
-![debug_exec.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_exec.png?alt=media&token=afcab7fe-274b-4a95-941f-ac89e31374a1)
+![debug_exec.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_exec.png?alt=media&token=0058f66a-b1c5-4e76-8826-f0912b7afc90)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -286,13 +286,13 @@ new ConstantTransformer(1)
 
 The final _ConstantTransformer_ returns **1** to finish and avoid errors.
 
-![debug_endconst.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_endconst.png?alt=media&token=b3f4a1bd-ae28-4b88-81b0-af8c36106946)
+![debug_endconst.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_endconst.png?alt=media&token=88172388-17dc-4c11-ba45-8436bf677131)
 
 ---
 
 ### #4. Creating LazyMap and TiedMapEntry
 
-![lazymap_tiedmap.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Flazymap_tiedmap.png?alt=media&token=28af0b58-e28d-4860-ba8a-6e30623db80c)
+![lazymap_tiedmap.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Flazymap_tiedmap.png?alt=media&token=2f6b4245-1417-4c5d-8ee9-05a00344ce36)
 
 ```java
 final Map innerMap = new HashMap();
@@ -306,7 +306,7 @@ The `innerMap` object is a regular `HashMap`, initially empty and without any sp
 - The actual data is still stored in `innerMap`.
 - `transformerChain` acts as a factory: When a key doesn't exist in innerMap, instead of returning null, LazyMap will call `transformerChain.transform(key)` to create the corresponding value. Initially, `transformerChain` is just a fake chain, returning only `1`, but it will be replaced with the real chain later.
 
-![debug_lazymap.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_lazymap.png?alt=media&token=b2e73264-750d-420f-adb8-198c1e49c721)
+![debug_lazymap.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_lazymap.png?alt=media&token=92e3f132-ae2e-4266-b343-e1fb4205bb18)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -316,13 +316,13 @@ TiedMapEntry entry = new TiedMapEntry(lazyMap, "foo");
 
 `TiedMapEntry` is also a class in `Apache Commons Collections`, designed to link a Map with a specific key. The `entry` object created is a `TiedMapEntry` that connects `lazyMap` with the key `"foo"`. When `entry.toString()` is called, it will call `lazyMap.get()` because the key "foo" doesn't exist yet, and `transformerChain.transform()` will be called, triggering the gadget-chain.
 
-![debug_tiedmap.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_tiedmap.png?alt=media&token=b554dce6-de3c-4ea7-a196-f96dca7c5b10)
+![debug_tiedmap.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_tiedmap.png?alt=media&token=63df2812-0977-4592-9c74-acae377ceb96)
 
 ---
 
 ### #5. Assigning to `BadAttributeValueExpException` for Automatic Triggering
 
-![BadAttribute.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2FBadAttribute.png?alt=media&token=74febcbe-2d18-44c1-8ceb-5e97356e69d4)
+![BadAttribute.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2FBadAttribute.png?alt=media&token=9b536a10-c22e-477e-abf2-e270acf6589e)
 
 ```java
 BadAttributeValueExpException val = new BadAttributeValueExpException(null);
@@ -330,7 +330,7 @@ BadAttributeValueExpException val = new BadAttributeValueExpException(null);
 
 `BadAttributeValueExpException` is a class in Java, used when there's an error in the value of an attribute. `val` is an object of this class. Here, when initializing the `val` object, we pass `null` because this value will be changed later to override the `toString()` method, causing the `toString()` of `TiedMapEntry` to be triggered.
 
-![debug_val.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_val.png?alt=media&token=b3cb7e1b-3f67-4683-a072-79f0d0754f0f)
+![debug_val.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_val.png?alt=media&token=2924d3cc-3579-4c63-91c3-ea245dda84c8)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -340,7 +340,7 @@ Field valfield = val.getClass().getDeclaredField("val");
 
 The `valfield` object belongs to the `Field` class. The `getClass()` method returns a Class object representing the class of `val` (BadAttributeValueExpException). The `getDeclaredField(String fieldName)` method is a method of the `Class` class, helping to get information about a specific field in the class. It returns a Field object containing information about the "val" field, whether it's private, protected, or public.
 
-![debug_valfield.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_valfield.png?alt=media&token=4956008b-e145-4ffb-a362-2c7e9d520064)
+![debug_valfield.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_valfield.png?alt=media&token=2954f9ce-6f7d-4a20-b1cc-21582658a0a3)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -369,7 +369,7 @@ The `setAccessible()` method is a wrapper that calls `setAccessible(true)` from 
 
 The `setAccessible()` called here helps to change the value of the private field `val`.
 
-![debug_setAccess.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_setAccess.png?alt=media&token=4994721d-6b59-4dd3-8bb0-67bca6aa8f84)
+![debug_setAccess.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_setAccess.png?alt=media&token=95777be7-eebf-45c3-9d28-b4d9d010933d)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -379,7 +379,7 @@ valfield.set(val, entry);
 
 The `set(Object obj, Object value)` method of the `Field` class sets the value of the `val` field in the `val` object to `entry`. `entry` was previously assigned as a `TiedMapEntry`.
 
-![debug_setField.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_setField.png?alt=media&token=c2509806-cf2c-4a0c-8ef9-e7e990db8e90)
+![debug_setField.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_setField.png?alt=media&token=185879c7-82d2-4033-b766-4783cfc6131e)
 
 <div style="width: 350px; height: 0.5px; background-color: black; margin: 15px auto;"></div>
 
@@ -398,7 +398,7 @@ public static void setFieldValue(final Object obj, final String fieldName, final
 
 `setFieldValue(obj, fieldName, value)` has the main function of finding and changing the value of a private or protected field - fields that normally cannot be accessed from outside the class - in an object. In this case, it sets the value of `iTransformers` in `transformerChain` (fake chain) to `transformers` (real chain).
 
-![debug_replace.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug_replace.png?alt=media&token=5d5f78dd-c2ef-450e-a96e-eb3e1a62cce7)
+![debug_replace.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug_replace.png?alt=media&token=67a72784-11b5-48b3-967c-64f4971546df)
 
 ### #6. Conclusion
 
@@ -418,9 +418,9 @@ When the payload is passed to `readObject()`, the sequence will be:
 
    - .getMethod("getRuntime")
 
-   - .invoke(null) → Runtime.getRuntime()
+   - .invoke(null) â†’ Runtime.getRuntime()
 
-   - .exec(command) → Execute the command.
+   - .exec(command) â†’ Execute the command.
 
 ---
 
@@ -452,7 +452,7 @@ Using `CommonsCollections5` as an example, which was analyzed in this report, in
 java8 -jar ysoserial-all.jar CommonsCollections5 'sh -c $@|sh . echo open -a Calculator'
 ```
 
-![payload.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fpayload.png?alt=media&token=748eeeed-4704-42c1-88b5-5969f940530a)
+![payload.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fpayload.png?alt=media&token=e3d27387-73d3-4373-bed4-2599095e76fd)
 
 In the web application demonstrating the deserialization vulnerability, user data is serialized then base64 encoded before being stored in a cookie, so when creating the payload, it also needs to be base64 encoded to be inserted into the cookie, as the payload will be base64 decoded then deserialized.
 
@@ -460,7 +460,7 @@ In the web application demonstrating the deserialization vulnerability, user dat
 
 In the process of creating and exploiting payloads, the `Runtime.getRuntime().exec(command)` command is used to execute system commands. But if you just pass a command as you would on a normal shell to create the payload, it won't work as expected when deserialized.
 
-In the article "sh – Or: Getting a shell environment from Runtime.exec", author Markus Wulftange discusses using the Runtime.exec method in Java on Unix systems. He points out that when using Runtime.exec, commands are not executed in an actual shell, leading to features like pipes, redirections, quoting, or expansions not working as expected.
+In the article "sh â€“ Or: Getting a shell environment from Runtime.exec", author Markus Wulftange discusses using the Runtime.exec method in Java on Unix systems. He points out that when using Runtime.exec, commands are not executed in an actual shell, leading to features like pipes, redirections, quoting, or expansions not working as expected.
 
 To overcome this, the author suggests using the command `sh -c $@|sh . echo [command]` to create a full shell environment, allowing the execution of complex commands with all shell features. This method takes advantage of sh's ability to pass commands through standard input, helping to overcome the limitations of Runtime.exec.
 
@@ -470,7 +470,7 @@ Article link: https://codewhitesec.blogspot.com/2015/03/sh-or-getting-shell-envi
 
 Tool to help create runtime.exec payloads faster: https://ares-x.com/tools/runtime-exec/
 
-![tool_runtime.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Ftool_runtime.png?alt=media&token=e4c9c578-4479-4929-8ad3-1cc86b49aad9)
+![tool_runtime.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Ftool_runtime.png?alt=media&token=c3e4bb98-c050-492d-94db-b9c69b7637c6)
 
 ---
 
@@ -483,75 +483,75 @@ In the process of debugging the demo website, we use IntelliJ IDEA to leverage c
 To debug effectively, breakpoints are set at key points in the application and the `CommonsCollections5` gadget-chain to monitor the execution flow from cookie deserialization to RCE.
 
 - **/login Endpoint**: Set a breakpoint to see the username value during login, observe it being serialized and added to the `user_session` cookie.
-  ![endpoint_login.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fendpoint_login.png?alt=media&token=ab72fbe3-4ef7-4964-9c1a-bdad14e29a10)
+  ![endpoint_login.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fendpoint_login.png?alt=media&token=4332f695-ef7f-4fa2-893f-1ea2c4dcbb57)
 
 - **/home Endpoint**: Breakpoint at the cookie processing step before deserialization, confirming the input data.
-  ![endpoint_home.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fendpoint_home.png?alt=media&token=e9e1811c-b829-429e-a067-6b6195aad460)
+  ![endpoint_home.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fendpoint_home.png?alt=media&token=d5ac123d-90db-45a3-8d1d-6a35e675d69d)
 
 - **Deserialize cookie**: Breakpoint at the step of deserializing the user_session cookie to see the payload being passed in.
-  ![deserialize.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdeserialize.png?alt=media&token=ac0ff131-ea3e-42a5-a649-59c6e10f23b7)
+  ![deserialize.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdeserialize.png?alt=media&token=b23cf505-5393-4158-a961-feb8e57f266d)
 
 - `CommonsCollections5` Gadget-chain: Breakpoints in the main classes:
 
   - `BadAttributeValueExpException.readObject()`:
-    ![badattribute2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fbadattribute2.png?alt=media&token=c73c6f2f-de90-408a-a777-0d697402232e)
+    ![badattribute2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fbadattribute2.png?alt=media&token=22158980-b87f-4aa6-8023-208a35b86845)
 
   - `TiedMapEntry.toString()`,`TiedMapEntry.getKey()` and `TiedMapEntry.getValue()`: Monitor LazyMap activation.
-    ![TiedMapEntry_toString.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2FTiedMapEntry_toString.png?alt=media&token=cb32e8a2-9257-4fad-a273-2a4307897626)
-    ![TiedMapEntry_getValue.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2FTiedMapEntry_getValue.png?alt=media&token=7fa15492-6e62-439b-8901-3f5ff3a4bd02)
+    ![TiedMapEntry_toString.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2FTiedMapEntry_toString.png?alt=media&token=fabc1857-06b3-4d72-916c-a11348ef13e8)
+    ![TiedMapEntry_getValue.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2FTiedMapEntry_getValue.png?alt=media&token=ac500d97-c029-4268-ab8a-c6ea840273a8)
 
   - `LazyMap.get()`: Preparing to activate ChainedTransformer
-    ![lazymap_get.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Flazymap_get.png?alt=media&token=53cf07f5-6a4f-449c-85bb-6d9ddacafe9a)
+    ![lazymap_get.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Flazymap_get.png?alt=media&token=e0a09032-ea6b-4286-88fc-d9792ccc3cac)
   - `ChainedTransformer.transform()`: Analyze each transformer step.
-    ![ChainedTransformer.tranform()](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fchainedtransformer_transform.png?alt=media&token=7e75f219-b168-4bc7-a723-b160b5f16772)
+    ![ChainedTransformer.tranform()](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fchainedtransformer_transform.png?alt=media&token=743d75b1-c506-4db9-8aa0-c3363c895a22)
   - `ConstantTransformer.transform()`:
-    ![constanttransformer.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fconstanttransformer.png?alt=media&token=663158e7-d61c-459f-a433-efef4001fb92)
+    ![constanttransformer.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fconstanttransformer.png?alt=media&token=0783e3c0-be67-4c4d-aed5-63dd13f5d887)
   - `InvokerTransformer.transform()`: View the system command being executed.
-    ![invokertransformer.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Finvokertransformer.png?alt=media&token=964892db-5ae7-4d3c-a907-d5ce5ebbf4c7)
+    ![invokertransformer.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Finvokertransformer.png?alt=media&token=8d8b5f44-a7b2-4606-9e6c-8d2efe155e9f)
 
 ## **6.2. Detailed Debugging of the Execution Flow**
 
 When accessing the website, the login page appears first:
-![login_page.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Flogin_page.png?alt=media&token=05cb7e7a-bfe4-4b69-8910-89595290bf5b)
+![login_page.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Flogin_page.png?alt=media&token=7e407dd6-2ba8-41d2-ada0-04dcbd7be123)
 We'll register before logging in, registration page:
-![register_page.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fregister_page.png?alt=media&token=cd6f1241-4adf-4ace-8a16-3e437450f780)
+![register_page.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fregister_page.png?alt=media&token=7aada999-7f45-4268-80a8-5b63f926035e)
 When sign up is successful, the website reports "Registration Successfully":
-![register_success.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fregister_success.png?alt=media&token=606674b5-27d6-4faf-b58b-af4333fe7923)
+![register_success.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fregister_success.png?alt=media&token=e52be3a3-003e-4c9c-ab66-d2547ac0ebaf)
 After successful login, we'll be redirected to the Home Page:
-![home_page.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fhome_page.png?alt=media&token=656bfc4a-a893-479e-a0f5-03064e2d22be)
+![home_page.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fhome_page.png?alt=media&token=cc0c595e-1613-437a-bdb5-5256ce96cf0e)
 On the Home Page, we see a line saying "Hello test!" with `test` being the username we just registered and used to log in. In `AuthController`, the `username` when logging in will be serialized then base64 encoded and stored in a cookie named `user_session`:
-![debug2_cookie.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_cookie.png?alt=media&token=731d0fb5-a28c-4224-8359-5a06d49d4c4b)
+![debug2_cookie.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_cookie.png?alt=media&token=f723765b-bedb-4168-9dcc-e5345cb778c1)
 
 After the `username` is successfully serialized, base64 encoded and added to the cookie, the `/auth/home` endpoint will be called and the process of deserializing the cookie will take place to read the username that was previously serialized and base64 encoded, then display "Hello [username]":
-![debug2_deserialize_cookie.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_deserialize_cookie.png?alt=media&token=dc2b251f-735d-41e7-b3c7-196f6e268a6a)
+![debug2_deserialize_cookie.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_deserialize_cookie.png?alt=media&token=6215d9c8-f1c6-4d93-8353-c0b6cd54f7e0)
 
-![debug2_deserialize_cookie2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_deserialize_cookie2.png?alt=media&token=70291a3b-2a20-4930-9057-a9a224f1177a)
+![debug2_deserialize_cookie2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_deserialize_cookie2.png?alt=media&token=d100c8bc-a0fd-4edf-8a97-5e80cca7ecc6)
 
 We can also check the cookie in the browser:
-![cookie_browser.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fcookie_browser.png?alt=media&token=3ff42099-5c28-4f0c-b372-930330720304)
+![cookie_browser.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fcookie_browser.png?alt=media&token=2d0df3fe-db90-4679-94e0-ef1d1708d299)
 Now we can change the cookie value with the payload created in [section 5](#5-creating-payloads-with-ysoserial):
-![cookie_payload.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fcookie_payload.png?alt=media&token=716c1a71-6c6a-4d58-975c-5e83a472e976)
+![cookie_payload.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fcookie_payload.png?alt=media&token=da4915b5-ae78-4384-affb-9fea8633bd5f)
 When reloading, the `/home` endpoint is called again, the cookie containing the payload will go into the `deserializeFromBase64` method to decode base64 and deserialize:
-![debug2_payloadintodeserialize.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_payloadintodeserialize.png?alt=media&token=66989f78-4a67-42f6-aa0d-a7f5f491ff63)
-![debug2_payloadintodeserializefunc.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_payloadintodeserializefunc.png?alt=media&token=087936b6-4182-4895-bebd-24cde08cb2a3)
+![debug2_payloadintodeserialize.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_payloadintodeserialize.png?alt=media&token=6e5169bc-d047-4022-b6d5-9f687a5136a9)
+![debug2_payloadintodeserializefunc.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_payloadintodeserializefunc.png?alt=media&token=643c249e-56c5-4e11-921f-5cbd7f0f5e00)
 
 When the payload goes into `.readObject()` in the `deserializeFromBase64` method, it is the object that was pre-created to execute the gadget-chain, which will override the `readObject()` method in the `BadAttributeValueExpException` class:
-![debug2_readobject_badattr.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_readobject_badattr.png?alt=media&token=7fcb2461-89a0-4c87-80ac-9f7d7814fcab)
+![debug2_readobject_badattr.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_readobject_badattr.png?alt=media&token=e97b18c1-8695-4073-a0f1-48b2faece071)
 
 The `valObj` object, taken from `gf.get("val", null)` in `readObject` of `BadAttributeValueExpException`, is the value of the `val` field from the deserialized data. With the payload from ysoserial, `valObj` is a `TiedMapEntry`, it activates `toString()` in the final branch:
-![debug2_valObj_toString.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_valObj_toString.png?alt=media&token=6ea0646c-be24-493d-a36a-08f3b3093e84)
+![debug2_valObj_toString.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_valObj_toString.png?alt=media&token=c3e645c2-9133-4d29-be1b-94dfe818ce25)
 
 And `valObj` is a `TiedMapEntry`, when `toString()` is called on `valObj`, the `toString()` method of `TiedMapEntry` will be activated:
-![debug2_tiedmapentry_tostring.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_tiedmapentry_tostring.png?alt=media&token=6be3568f-af5d-4624-a181-3240c4767639)
+![debug2_tiedmapentry_tostring.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_tiedmapentry_tostring.png?alt=media&token=8e466e65-8454-4b31-9ba6-46971127964a)
 
 The `TiedMapEntry.toString()` method successively calls `getKey()` (returns "foo") and `getValue()`, `getValue()` returns `map.get(key)`, which is `map.get("foo")`:
-![debug2_tiedmapentry_get.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_tiedmapentry_get.png?alt=media&token=4e3e3ee5-5cea-465d-8f10-6bb5369b7039)
+![debug2_tiedmapentry_get.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_tiedmapentry_get.png?alt=media&token=74de8010-b9c8-49b1-afd7-a795bd85037e)
 
 Because map is a `LazyMap`, `LazyMap.get("foo")` is activated:
-![debug2_lazymap_get.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_lazymap_get.png?alt=media&token=766a00f1-1ced-46fa-93c9-6cf15b4244bb)
+![debug2_lazymap_get.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_lazymap_get.png?alt=media&token=bd2e7e7a-ebd9-4c00-92b3-e55207c9432e)
 
 Here, the code checks whether the key `"foo"` exists, and because the map here is an empty `HashMap`, which is the `innerMap` object mentioned above, the key doesn't exist, so it activates `factory.transform(key)` with factory being a `ChainedTransformer` (the `transformers` object in ysoserial) leading to the activation of `ChainedTransformer.transform()`:
-![debug2_chainedtransformer_transform.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_transform.png?alt=media&token=32bfa2db-7974-4a74-bf45-e686077737a9)
+![debug2_chainedtransformer_transform.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_transform.png?alt=media&token=d6b85809-de79-4a09-b610-7e0dd7fce46e)
 
 `iTransformers[]` in `ChainedTransformer` is an array containing `Transformer` interfaces. These objects are typically concrete classes like `ConstantTransformer` or `InvokerTransformer`, used to perform a series of transformations on the input data.
 
@@ -562,10 +562,10 @@ The Transformer chain proceeds as follows:
 - `i = 0`, `object = "foo"`:
 
   The first Transformer is a `ConstantTransformer`, the value passed in (object) is `"foo"`.
-  ![debug2_chainedtransformer_loop_0.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_0.png?alt=media&token=b921885b-51db-40c1-8f93-b44dd35d2615)
+  ![debug2_chainedtransformer_loop_0.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_0.png?alt=media&token=7858f07f-5acb-4c1f-b0dd-4e01f0eec105)
 
   The `transform` method of the `ConstantTransformer` class only receives input without processing it, just returning the `iConstant` that was set up when creating the payload.
-  ![debug2_chainedtransformer_loop_0_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_0_1.png?alt=media&token=aa9ec35d-4d99-4a8d-87f4-dd610b89bf1e)
+  ![debug2_chainedtransformer_loop_0_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_0_1.png?alt=media&token=39dd5f01-40b5-4bcb-8ae5-fee618b650e8)
   When the first loop ends, `object` is `java.lang.Runtime` or `Runtime.class`.
 
 <br>
@@ -575,29 +575,29 @@ The next 3 Transformers are `InvokerTransformer`. `InvokerTransformer` is a clas
 The `Java Reflection API` is a collection of `classes` and `interfaces` in the `java.lang.reflect` package, allowing programs to inspect and manipulate `classes`, `methods`, `fields`, `constructors` at `runtime`, even when detailed information about them is not known in advance.
 
 Here, the `Java Reflection API` is used to indirectly call a method. This API allows calling a method of any class. An example of invoke can get a method from another class:
-![debug2_chainedtransformer_loop_1_6.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_6.png?alt=media&token=219f4f75-452e-429b-b8ef-7b53053d1265)
+![debug2_chainedtransformer_loop_1_6.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_6.png?alt=media&token=41f09ea6-e076-4455-8f38-57b9955468f5)
 
 With the conventional way:
 
-![debug2_chainedtransformer_loop_1_7.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_7.png?alt=media&token=dd37d2db-6047-4fa1-b91c-253029682900)
+![debug2_chainedtransformer_loop_1_7.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_7.png?alt=media&token=a61596b2-5d75-40ac-b2e3-1479a7f45b7f)
 
 Using Reflection:
-![debug2_chainedtransformer_loop_1_8.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_8.png?alt=media&token=6d3a008d-3fdc-4f66-890e-f6c9d7c451a8)
+![debug2_chainedtransformer_loop_1_8.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_8.png?alt=media&token=006e8f73-205d-4be9-926e-f316dda30a6e)
 That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
 
 - `i = 1`, `object = Runtime.class`:
-  ![debug2_chainedtransformer_loop_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1.png?alt=media&token=8ee1455e-14cd-49fb-81d5-ef9d413c42a9)
+  ![debug2_chainedtransformer_loop_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1.png?alt=media&token=1d380e47-676d-4bf4-ab94-43e4fdb8944c)
 
   The `transform` method in `InvokerTransformer`:
-  ![debug2_chainedtransformer_loop_1_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_1.png?alt=media&token=2a57092a-468d-4ee6-b1f3-dcbc265ffcf9)
+  ![debug2_chainedtransformer_loop_1_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_1.png?alt=media&token=8a678aad-89f9-467e-929f-4f91f9ae6c81)
 
   Going into the analysis, the initial `input` is `object` (Runtime.class). The first if condition is not satisfied, so the program falls into the try block:
-  ![debug2_chainedtransformer_loop_1_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_2.png?alt=media&token=241128a0-593e-4286-b6b9-17472d09db50)
+  ![debug2_chainedtransformer_loop_1_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_2.png?alt=media&token=026da64e-ed3c-4593-b864-7488abfdc693)
 
   - `Class cls = input.getClass()`:
 
     The `getClass()` method helps get the class of the object, here `input` is `Runtime.class` so `cls` will be class `Class` or `Class.class`:
-    ![debug2_chainedtransformer_loop_1_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_3.png?alt=media&token=78d0d27b-1df3-4be0-a1bc-0060617dc3bd)
+    ![debug2_chainedtransformer_loop_1_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_3.png?alt=media&token=4a5b228f-63d7-4ffd-9cc8-3bc8a6527e54)
 
   - `Method method = cls.getMethod(iMethodName, iParamType)`:
 
@@ -608,10 +608,10 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
     `iMethodName` is `"getMethod"`.
 
     `iParamType` is `Class[] { String.class, Class[].class }`.
-    ![debug2_chainedtransformer_loop_1_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_4.png?alt=media&token=7de17c3f-713a-4a31-8ba7-6fb450227be4)
+    ![debug2_chainedtransformer_loop_1_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_4.png?alt=media&token=fcd32a12-ec1a-44b2-81d4-213707c6e037)
 
     It follows that `Method method = Class.class.getMethod("getMethod", Class[] { String.class, Class[].class })`, so `getMethod` will return the `getMethod` method of the `Class` class => `method` is `Class.getMethod`.
-    ![debug2_chainedtransformer_loop_1_9.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_9.png?alt=media&token=1c38cd5a-0c03-4d1f-873a-35f9f0a56a6f)
+    ![debug2_chainedtransformer_loop_1_9.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_9.png?alt=media&token=9f9946f5-8aed-46e3-95d2-a22fe93f9cbd)
 
   - `return method.invoke(input, iArgs)`:
 
@@ -620,7 +620,7 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
     `input` is `Runtime.class`.
 
     `iArgs` is `Object[] {"getRuntime", new Class[0] }`.
-    ![debug2_chainedtransformer_loop_1_5.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_1_5.png?alt=media&token=e15e1e0c-0251-42ac-806a-960914a9f902)
+    ![debug2_chainedtransformer_loop_1_5.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_1_5.png?alt=media&token=2cc621c9-2ebe-4ac8-8990-1d72dffa71f0)
 
     With the final code using reflection, it can be understood as `Runtime.class.getMethod("getRuntime")`, the result returned is an object of type `Method` => `object` is the `getRuntime` method of the `Runtime` class.
 
@@ -628,13 +628,13 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
 
 - `i = 2`, `object` is `Method getRuntime()`:
 
-  ![debug2_chainedtransformer_loop_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_2.png?alt=media&token=b3e6afdd-eb46-48ee-abc2-6707c1478563)
-  ![debug2_chainedtransformer_loop_2_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_2_1.png?alt=media&token=6c9e1cad-a802-4527-aa29-b700e9ef3158)
+  ![debug2_chainedtransformer_loop_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_2.png?alt=media&token=a6e50d1a-79df-46e3-838f-8b49408e45b4)
+  ![debug2_chainedtransformer_loop_2_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_2_1.png?alt=media&token=fbb7d130-6dda-4db7-9f06-b8533ef7ff98)
 
   - `Class cls = input.getClass()`:
 
     `input` is the `getRuntime` method, and `getRuntime` is an instance of the `Method` class, so `getClass()` will return the class `Method` => `cls` is the class `Method`:
-    ![debug2_chainedtransformer_loop_2_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_2_2.png?alt=media&token=9d8e6608-1a8e-44bb-b2de-a2f3641e949f)
+    ![debug2_chainedtransformer_loop_2_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_2_2.png?alt=media&token=2d4f4fff-e86f-4bc6-99b1-2fa0755e6f1d)
 
   - `Method method = cls.getMethod(iMethodName, iParamTypes)`:
 
@@ -643,9 +643,9 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
     `iMethodName` is `invoke`.
 
     `iParamTypes` is `Class[] { Object.class, Object[].class }`.
-    ![debug2_chainedtransformer_loop_2_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_2_3.png?alt=media&token=4f560805-a2c9-45fa-ac1c-64e08fcb2516)
+    ![debug2_chainedtransformer_loop_2_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_2_3.png?alt=media&token=266cfc6d-0d82-471e-8691-7dfa99c1a0cd)
     It is equivalent to `Method.class.getMethod("invoke", Class[] { Object.class, Object[].class })`, will return the `invoke` method of the `Method` class => `method` is `Method.invoke()`
-    ![debug2_chainedtransformer_loop_2_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_2_4.png?alt=media&token=bcd3d471-1b1a-4832-aad1-585663d0b263)
+    ![debug2_chainedtransformer_loop_2_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_2_4.png?alt=media&token=bd4eb1b6-120b-44c9-86c3-f717dcf4e3df)
 
   - `return method.invoke(input, iArgs)`:
 
@@ -654,7 +654,7 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
     `input` is `Method getRuntime()`.
 
     `iArgs` is `Object[] { null, new Object[0] }`.
-    ![debug2_chainedtransformer_loop_2_5.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_2_5.png?alt=media&token=81917867-dd2f-4908-816b-da290aa70a4e)
+    ![debug2_chainedtransformer_loop_2_5.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_2_5.png?alt=media&token=66d3e4fb-03f1-4447-9754-52afe350c41c)
 
     At this step, `method` is `Method.invoke()`, so the code can be understood as `getRuntime.invoke(null, null)`, which is executing `Runtime.getRuntime()`. When executed, it will call `Runtime.getRuntime()` and return an instance of `Runtime`. Meanwhile, at step `i = 1`, `object` was only the `getRuntime` method, that is, an `instance` of `Method`, not actually executed.
 
@@ -662,13 +662,13 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
 
 - `i = 3`, `object = Runtime.getRuntime()`:
 
-  ![debug2_chainedtransformer_loop_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3.png?alt=media&token=7e2dde04-e76a-40b2-a64a-e7958333c108)
-  ![debug2_chainedtransformer_loop_3_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_1.png?alt=media&token=f2780fe8-49e8-42d1-add8-83c805778478)
+  ![debug2_chainedtransformer_loop_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3.png?alt=media&token=ac54a5eb-adf5-4490-9399-834f5f7a0546)
+  ![debug2_chainedtransformer_loop_3_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_1.png?alt=media&token=90da3fd0-b653-4c34-9c0e-28c95007896b)
 
   - `Class cls = input.getClass()`:
 
     `input` is `Runtime.getRuntime()`, so `getClass()` will get the class of this method => `cls` is `Runtime.class`.
-    ![debug2_chainedtransformer_loop_3_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_2.png?alt=media&token=53189e1a-43c0-47b0-ab1d-38a9bdff93e6)
+    ![debug2_chainedtransformer_loop_3_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_2.png?alt=media&token=db319b77-0817-44a4-b3cc-22d4e774df8f)
 
   - `Method method = cls.getMethod(iMethodName, iParamTypes)`:
 
@@ -677,10 +677,10 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
     `iMethodName` is `"exec"`.
 
     `iParamTypes` is `Class[] { String.class }`.
-    ![debug2_chainedtransformer_loop_3_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_3.png?alt=media&token=166e2fde-25d3-412c-97e2-3acf86b3faeb)
+    ![debug2_chainedtransformer_loop_3_3.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_3.png?alt=media&token=d5be389f-0b1c-4364-804a-85adcf0a1604)
 
     `getMethod()` will get the `exec` method of the `Runtime` class => `method` is `Runtime.exec()`.
-    ![debug2_chainedtransformer_loop_3_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_4.png?alt=media&token=6a6322b3-5b5f-4a28-a768-9beeaeb2d82f)
+    ![debug2_chainedtransformer_loop_3_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_4.png?alt=media&token=4085910d-ee77-42de-8bc7-0c8456eb8d00)
 
   - `return method.invoke(input, iArgs)`:
 
@@ -689,13 +689,13 @@ That is, `method.invoke(obj, param)` is equivalent to `obj.method(param)`
     `input` is `Runtime.getRuntime()`.
 
     `iArgs` is `execArgs` which is the command we want to execute.
-    ![debug2_chainedtransformer_loop_3_5.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_5.png?alt=media&token=36071a9a-1d74-4ad0-9d58-3f63c4e9bc95)
+    ![debug2_chainedtransformer_loop_3_5.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_5.png?alt=media&token=5ecb2aa8-53fa-490f-9db1-8ea46650b2ce)
 
     It will execute `Runtime.getRuntime().exec(execArgs)`
-    ![debug2_chainedtransformer_loop_3_6.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_6.png?alt=media&token=4aa5226d-5783-4965-a0b6-d666a745f5a6)
+    ![debug2_chainedtransformer_loop_3_6.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_6.png?alt=media&token=86812753-67d6-4180-bf3c-2940f77289c4)
 
     and RCE
-    ![debug2_chainedtransformer_loop_3_7.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_3_7.png?alt=media&token=cf20b728-433e-4402-a591-b4f1f3519186)
+    ![debug2_chainedtransformer_loop_3_7.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_3_7.png?alt=media&token=4f721a99-6c61-4f21-a092-3726d9d70ded)
     This time, it returns an instance of `Process` representing the process just created.
 
 <br>
@@ -704,31 +704,31 @@ The final Transformer is a `ConstantTransformer`
 
 - `i = 4`, `object` is an instance of `Process`(UNIXProcess):
 
-  ![debug2_chainedtransformer_loop_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_4.png?alt=media&token=2ab35c25-4f04-465f-8c30-e073fbc8da56)
+  ![debug2_chainedtransformer_loop_4.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_4.png?alt=media&token=fff014da-7040-41c9-b5ac-e51f4d20ee7a)
 
   `ConstantTransformer` returns a fixed value regardless of the input, so it returns 1 to end the Transformer chain, avoiding errors when no more actions are needed.
-  ![debug2_chainedtransformer_loop_4_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_4_1.png?alt=media&token=ff2d2e34-e98b-4641-8413-1147a65451aa)
+  ![debug2_chainedtransformer_loop_4_1.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_4_1.png?alt=media&token=6869a1a1-99c1-4e05-a4b9-f1df8b410f6e)
 
 Next, when `i = 5`, the loop has gone through the entire `iTransformers` array, it returns `object` carrying the value of the last `Transformer` returned, which is `1`.
-![debug2_chainedtransformer_loop_4_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_chainedtransformer_loop_4_2.png?alt=media&token=8491be0a-9907-453f-9252-b208014a4dfe)
+![debug2_chainedtransformer_loop_4_2.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_chainedtransformer_loop_4_2.png?alt=media&token=7167cc93-bbe4-412b-bd70-08f94dfb4525)
 
 At this point, back to `LazyMap`, `value` carries the value returned at the end of the Transformer chain, which is `1`, the key `"foo"` is added to the map (the `innerMap` object from the payload - a HashMap) and returns `value` (1).
-![debug2_lazymap_putkey.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fdebug2_lazymap_putkey.png?alt=media&token=e37ac5b5-0626-4504-8c13-09353d9d7592)
+![debug2_lazymap_putkey.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fdebug2_lazymap_putkey.png?alt=media&token=ced0e6d4-0889-4d91-8e19-df4e54d0ce1e)
 
 To TiedMapEntry, the 2 methods `getKey()` and `getValue` are done
-![tiedmapentry_return.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Ftiedmapentry_return.png?alt=media&token=72733f59-78f7-48ed-b700-5984db7a501f)
+![tiedmapentry_return.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Ftiedmapentry_return.png?alt=media&token=e433bad1-0ea9-4344-8b1e-de688263aa68)
 `getKey()` returns `"foo"`, `getValue()` returns `1` => `TiedMapEntry.toString()` returns `"foo=1"`
 
 Next to `BadAttributeExpException`, now `val` will have the value `"foo=1"`
-![val_value.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fval_value.png?alt=media&token=be02e71d-ff90-4896-94de-c2bae05bd2e1)
+![val_value.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fval_value.png?alt=media&token=9e41a8bf-fab8-4bc2-943a-49bf4204d68a)
 
 And finally back to `AuthController`, it returns the object that has been deserialized
-![authcontroller_return.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fauthcontroller_return.png?alt=media&token=7cab94a9-4d25-40ab-87ca-d39ffcec3964)
+![authcontroller_return.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fauthcontroller_return.png?alt=media&token=8bf73799-9b02-4b42-8cf9-1a131cc52a74)
 and continues the application.
-![web_running.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Fweb_running.png?alt=media&token=d7f61698-a6ce-4985-a102-47265fab5717)
+![web_running.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Fweb_running.png?alt=media&token=e9ee91c6-43c1-46ac-a387-a2672ea5485c)
 
 On the web page, "Invalid Cookie" appears, but we have successfully exploited it.
-![invalid_cookie.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2Farchive-22%2Finvalid_cookie.png?alt=media&token=ffc082e1-c97e-4dbd-aca0-51f669929d14)
+![invalid_cookie.png](https://firebasestorage.googleapis.com/v0/b/blogs-for-portfolio.firebasestorage.app/o/blog-images%2F37d7c6c6-6420-4631-a46f-f2a246db8069%2Finvalid_cookie.png?alt=media&token=030f0217-3f21-484a-ae5a-098cbecea823)
 
 ---
 

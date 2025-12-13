@@ -20,10 +20,19 @@ function BlogPageContent() {
   const [filterNoHashtags, setFilterNoHashtags] = useState(false);
   const prevHashtagIdsRef = useRef<string[]>([]);
 
-  // Initialize and sync hashtag filter from URL parameters
+  const getInitialLanguage = () => {
+    const languageParam = searchParams?.get('language');
+    return languageParam === 'en' ? 'en' : 'vi'; // Default to 'vi'
+  };
+  
+  const [selectedLanguage, setSelectedLanguage] = useState<'vi' | 'en'>(getInitialLanguage);
+
+  // Initialize and sync hashtag and language filters from URL parameters
   useEffect(() => {
     const hashtagsParam = searchParams?.get('hashtags');
     const noHashtagsParam = searchParams?.get('noHashtags') === 'true';
+    const languageParam = searchParams?.get('language');
+    const urlLanguage = languageParam === 'en' ? 'en' : 'vi'; // Default to 'vi'
     
     const urlHashtagIds = hashtagsParam
       ? hashtagsParam.split(',').map(id => id.trim()).filter(id => id.length > 0 && id !== '__no_hashtags__')
@@ -33,9 +42,10 @@ function BlogPageContent() {
     const currentIdsString = JSON.stringify([...selectedHashtagIds].sort());
     const urlIdsString = JSON.stringify([...urlHashtagIds].sort());
     
-    if (currentIdsString !== urlIdsString || filterNoHashtags !== noHashtagsParam) {
+    if (currentIdsString !== urlIdsString || filterNoHashtags !== noHashtagsParam || selectedLanguage !== urlLanguage) {
       setSelectedHashtagIds(urlHashtagIds);
       setFilterNoHashtags(noHashtagsParam);
+      setSelectedLanguage(urlLanguage);
       prevHashtagIdsRef.current = urlHashtagIds;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,6 +85,9 @@ function BlogPageContent() {
           limit: POSTS_PER_PAGE.toString(),
         });
         
+        // Add language filter (always required)
+        params.append('language', selectedLanguage);
+        
         // Add no-hashtags filter if enabled
         if (filterNoHashtags) {
           params.append('noHashtags', 'true');
@@ -102,12 +115,24 @@ function BlogPageContent() {
     };
 
     fetchPosts();
-  }, [currentPage, selectedHashtagIds, filterNoHashtags]);
+  }, [currentPage, selectedHashtagIds, filterNoHashtags, selectedLanguage]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
       setCurrentPage(newPage);
     }
+  };
+
+  const handleLanguageChange = (language: 'vi' | 'en') => {
+    setSelectedLanguage(language);
+    
+    // Update URL to reflect the filter state
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('language', language); // Language is always required
+    
+    // Update URL without page reload
+    const newUrl = params.toString() ? `?${params.toString()}` : '/blog';
+    router.replace(newUrl, { scroll: false });
   };
 
   const handleHashtagFilterChange = (hashtagIds: string[]) => {
@@ -161,6 +186,8 @@ function BlogPageContent() {
         filterNoHashtags={filterNoHashtags}
         onHashtagFilterChange={handleHashtagFilterChange}
         onNoHashtagsFilterToggle={handleNoHashtagsFilterToggle}
+        selectedLanguage={selectedLanguage}
+        onLanguageChange={handleLanguageChange}
       />
 
       <HashtagProvider>

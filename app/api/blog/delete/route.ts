@@ -41,7 +41,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get metadata - identifier could be UUID or slug
+    // Get metadata - identifier could be versionId, blogId, or slug
     const metadata = await getBlogPostMetadata(identifier);
     if (!metadata) {
       return NextResponse.json(
@@ -50,11 +50,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Use UUID for deletion
-    const uuid = metadata.blogId;
+    // Use versionId for deletion (deletes the version, not the entire blog)
+    const versionId = metadata.versionId || metadata.uuid || metadata.blogId;
 
-    // Delete blog post from Firestore and Storage
-    await deleteBlogPost(uuid);
+    // Delete blog version from Firestore and Storage
+    // This will also delete the main blog document if it's the last version
+    await deleteBlogPost(versionId);
 
     // Clear cache for this blog post (using slug)
     clearCache(metadata.slug);

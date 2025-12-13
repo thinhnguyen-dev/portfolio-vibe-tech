@@ -7,6 +7,8 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const searchParams = request.nextUrl.searchParams;
+    const language = searchParams.get('language'); // Optional language filter
     
     if (!slug || typeof slug !== 'string') {
       return NextResponse.json(
@@ -15,7 +17,10 @@ export async function GET(
       );
     }
     
-    const blogMetadata = await getBlogPostMetadataBySlug(slug);
+    // Validate language if provided
+    const validLanguage = language === 'vi' || language === 'en' ? language : undefined;
+    
+    const blogMetadata = await getBlogPostMetadataBySlug(slug, validLanguage);
     
     if (!blogMetadata) {
       return NextResponse.json(
@@ -27,7 +32,8 @@ export async function GET(
     // Convert Date objects to ISO strings for JSON serialization
     return NextResponse.json({
       blogId: blogMetadata.blogId,
-      uuid: blogMetadata.uuid,
+      versionId: blogMetadata.versionId || blogMetadata.uuid, // Version ID (document ID in blogVersions)
+      uuid: blogMetadata.versionId || blogMetadata.uuid || blogMetadata.blogId, // For backward compatibility
       title: blogMetadata.title,
       description: blogMetadata.description,
       thumbnail: blogMetadata.thumbnail,
@@ -37,6 +43,7 @@ export async function GET(
       publishDate: blogMetadata.publishDate?.toISOString(),
       category: blogMetadata.category,
       hashtagIds: blogMetadata.hashtagIds || [],
+      language: blogMetadata.language || 'vi',
     });
   } catch (error) {
     console.error('Failed to fetch blog metadata:', error);

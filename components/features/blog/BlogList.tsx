@@ -113,8 +113,15 @@ export function BlogList({
         whileInView="visible"
         viewport={{ once: true, amount: "some" }}
       >
-        {posts.map((post, index) => (
-          <motion.div key={post.blogId || post.slug || `post-${index}`} variants={cardVariants}>
+        {posts.map((post, index) => {
+          // Use a unique key: prefer uuid (unique per language version), 
+          // then slug + language (if available), then fallback to slug or index
+          const uniqueKey = post.uuid 
+            ? post.uuid 
+            : (post.language ? `${post.slug}-${post.language}` : post.slug || `post-${index}`);
+          
+          return (
+            <motion.div key={uniqueKey} variants={cardVariants}>
             <BlogCard
               post={post}
               onUpdate={onUpdate}
@@ -122,7 +129,8 @@ export function BlogList({
               uploading={uploading}
             />
           </motion.div>
-        ))}
+          );
+        })}
       </motion.div>
 
       {showPagination && (

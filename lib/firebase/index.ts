@@ -24,7 +24,8 @@ export {
   uploadMarkdownToStorage,
   downloadMarkdownFromStorage,
   deleteBlogPost,
-  type BlogPostFirestoreData,
+  type BlogPostMainData,
+  type BlogVersionFirestoreData,
   type BlogPostMetadata as BlogPostFirestoreMetadata,
 } from './blog';
 

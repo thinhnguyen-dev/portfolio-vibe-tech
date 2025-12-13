@@ -9,6 +9,7 @@ import {
   uploadImageToStorage,
   getBlogThumbnailPath,
   uploadBlogImagesToStorage,
+  getBlogPostsByBlogId,
 } from '@/lib/firebase/blog';
 import { updateBlogHashtags } from '@/lib/firebase/hashtags';
 import { getFirebaseStorage } from '@/lib/firebase/config';
@@ -101,8 +102,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get existing blog post by slug to get UUID
-    const existingPost = await getBlogPostMetadataBySlug(slug);
+    // Get language from form data (should match existing post's language)
+    const languageParam = formData.get('language') as string | null;
+    
+    // Get existing blog post by slug (and language if provided) to get UUID
+    const existingPost = languageParam 
+      ? await getBlogPostMetadataBySlug(slug, languageParam)
+      : await getBlogPostMetadataBySlug(slug);
+    
     if (!existingPost) {
       return NextResponse.json(
         { error: 'Blog post not found' },
@@ -110,7 +117,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uuid = existingPost.blogId;
+    // Preserve the existing language - don't change it
+    const existingLanguage = existingPost.language || 'vi';
+    // Use versionId (document ID in blogVersions) for updating, not blogId (which is shared across language versions)
+    const versionId = existingPost.versionId || existingPost.uuid || existingPost.blogId;
+    const blogId = existingPost.blogId;
     let content: string | null = null;
     let extractedImages: Array<{ originalPath: string; savedPath: string; relativePath: string; buffer: Buffer; contentType: string }> = [];
 
@@ -150,7 +161,7 @@ export async function POST(request: NextRequest) {
 
         // Delete old images from Firebase Storage
         try {
-          const imagesDirectoryPath = `blog-images/${uuid}`;
+          const imagesDirectoryPath = `blog-images/${versionId}`;
           await deleteDirectoryContents(imagesDirectoryPath);
         } catch (error) {
           console.warn('Error deleting old images:', error);
@@ -162,7 +173,7 @@ export async function POST(request: NextRequest) {
         
         if (extractedImages.length > 0) {
           try {
-            imageUrlMap = await uploadBlogImagesToStorage(uuid, extractedImages);
+            imageUrlMap = await uploadBlogImagesToStorage(versionId, extractedImages);
             // Update image paths in markdown content with Firebase Storage URLs
             content = updateImagePathsWithFirebaseUrls(content, imageUrlMap);
           } catch (error) {
@@ -186,7 +197,7 @@ export async function POST(request: NextRequest) {
       // Update markdown in Firebase Storage
       if (content) {
         try {
-          await uploadMarkdownToStorage(uuid, content);
+          await uploadMarkdownToStorage(versionId, content);
           // Clear cache when content is updated
           clearCache(slug);
         } catch (error) {
@@ -204,7 +215,7 @@ export async function POST(request: NextRequest) {
     
     if (thumbnailFile) {
       try {
-        const thumbnailPath = getBlogThumbnailPath(uuid, thumbnailFile.name || 'thumbnail');
+        const thumbnailPath = getBlogThumbnailPath(versionId, thumbnailFile.name || 'thumbnail');
         thumbnailURL = await uploadImageToStorage(
           thumbnailFile,
           thumbnailPath,
@@ -255,19 +266,20 @@ export async function POST(request: NextRequest) {
     // This ensures we can read the old hashtagIds to determine what was added/removed
     // updateBlogHashtags handles everything atomically in a single transaction:
     // 1. Creates missing hashtags with generated IDs
-    // 2. Adds hashtagIds to blog's hashtagIds array
+    // 2. Adds hashtagIds to blog's hashtagIds array (in blogPosts collection)
     // 3. Adds blogId to hashtag's linkedBlogIds array (including newly created ones)
     let resolvedHashtagIds: string[] = [];
     if (shouldUpdateHashtags) {
       try {
         // updateBlogHashtags resolves identifiers, creates missing hashtags, and updates relationships
         // All in a single atomic transaction
-        resolvedHashtagIds = await updateBlogHashtags(uuid, hashtagIds || []);
-        console.log(`Successfully updated blog-hashtag relationships for blog ${uuid} with hashtags:`, resolvedHashtagIds);
+        // Use blogId (not versionId) since hashtags are stored in blogPosts collection
+        resolvedHashtagIds = await updateBlogHashtags(blogId, hashtagIds || []);
+        console.log(`Successfully updated blog-hashtag relationships for blog ${blogId} with hashtags:`, resolvedHashtagIds);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Failed to update blog-hashtag relationships:', {
-          blogId: uuid,
+          blogId: blogId,
           hashtagIds,
           error: errorMessage,
           stack: error instanceof Error ? error.stack : undefined,
@@ -285,10 +297,12 @@ export async function POST(request: NextRequest) {
       thumbnail: string;
       publishDate?: Date;
       hashtagIds?: string[];
+      language?: string;
     } = {
       title: finalTitle,
       description: finalDescription,
       thumbnail: thumbnailURL,
+      language: existingLanguage, // Preserve the existing language
     };
     
     if (publishDate !== undefined) {
@@ -302,7 +316,12 @@ export async function POST(request: NextRequest) {
     }
     
     try {
-      await saveBlogPostMetadata(uuid, slug, metadataUpdate);
+      // Preserve the language field when updating
+      await saveBlogPostMetadata(versionId, slug, metadataUpdate, blogId);
+      
+      // Note: Hashtags are now stored in the blogPosts collection (shared across all versions)
+      // The updateBlogHashtags call above already updated the blogPosts document
+      // No need to update individual versions since hashtags are shared
     } catch (error) {
       console.error('Failed to update metadata in Firestore:', error);
       // Continue even if metadata update fails

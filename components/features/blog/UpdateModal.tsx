@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, startTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
+import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import type { BlogPostMetadata } from '@/lib/firebase/blog';
 import { HashtagSelector } from './HashtagSelector';
 
@@ -20,6 +22,7 @@ interface UpdateModalProps {
   post: BlogPostMetadata | null;
   updating: boolean;
   error: string | null;
+  onLanguageVersionAdded?: () => void; // Callback when missing language version is uploaded
 }
 
 // Helper function to get initial publish date
@@ -43,6 +46,7 @@ export function UpdateModal({
   post,
   updating,
   error: externalError,
+  onLanguageVersionAdded,
 }: UpdateModalProps) {
   // Initialize state with values from post prop
   const [title, setTitle] = useState(() => post?.title || '');
@@ -55,8 +59,22 @@ export function UpdateModal({
   const [publishDate, setPublishDate] = useState(() => getInitialPublishDate(post));
   const [hashtagIds, setHashtagIds] = useState<string[]>(() => post?.hashtagIds || []);
   const [error, setError] = useState<string | null>(null);
+  const [hasVi, setHasVi] = useState(false);
+  const [hasEn, setHasEn] = useState(false);
+  const [uploadingMissingLanguage, setUploadingMissingLanguage] = useState(false);
+  const [showMissingLanguageUpload, setShowMissingLanguageUpload] = useState(false);
+  const [isMissingLanguageFormExpanded, setIsMissingLanguageFormExpanded] = useState(false);
+  const [missingLanguageFile, setMissingLanguageFile] = useState<File | null>(null);
+  const [missingLanguageTitle, setMissingLanguageTitle] = useState('');
+  const [missingLanguageDescription, setMissingLanguageDescription] = useState('');
+  const [missingLanguageImage, setMissingLanguageImage] = useState('');
+  const [missingLanguageImageFile, setMissingLanguageImageFile] = useState<File | null>(null);
+  const [missingLanguageImageMode, setMissingLanguageImageMode] = useState<'url' | 'upload'>('url');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const formKey = post?.blogId || '';
+  
+  const currentLanguage = post?.language || 'vi';
+  const missingLanguage = currentLanguage === 'vi' ? 'en' : 'vi';
 
   // Reset form when post changes or modal opens - batch updates using startTransition
   // This ensures fresh data from Firestore is loaded when modal opens
@@ -93,6 +111,34 @@ export function UpdateModal({
       });
     }
   }, [isOpen, formKey, post]);
+
+  // Check available language versions when modal opens
+  useEffect(() => {
+    if (isOpen && post?.blogId) {
+      const checkLanguageVersions = async () => {
+        try {
+          const response = await fetch(`/api/blog/language-versions?blogId=${post.blogId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setHasVi(data.hasVi);
+            setHasEn(data.hasEn);
+            // Show upload option if missing language version
+            const currentLang = post.language || 'vi';
+            if (currentLang === 'vi' && !data.hasEn) {
+              setShowMissingLanguageUpload(true);
+            } else if (currentLang === 'en' && !data.hasVi) {
+              setShowMissingLanguageUpload(true);
+            } else {
+              setShowMissingLanguageUpload(false);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check language versions:', error);
+        }
+      };
+      checkLanguageVersions();
+    }
+  }, [isOpen, post]);
 
   // Focus title input when modal opens
   useEffect(() => {
@@ -185,6 +231,137 @@ export function UpdateModal({
     onClose();
   };
 
+  const handleMissingLanguageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    const isMarkdown = selectedFile?.name.toLowerCase().endsWith('.md');
+    const isZip = selectedFile?.name.toLowerCase().endsWith('.zip');
+    
+    if (selectedFile && (isMarkdown || isZip)) {
+      setMissingLanguageFile(selectedFile);
+      
+      // Auto-populate title from filename if title is empty
+      if (!missingLanguageTitle) {
+        if (isMarkdown) {
+          const filenameWithoutExt = selectedFile.name.replace(/\.md$/i, '');
+          setMissingLanguageTitle(filenameWithoutExt);
+        } else if (isZip) {
+          const filenameWithoutExt = selectedFile.name.replace(/\.zip$/i, '');
+          setMissingLanguageTitle(filenameWithoutExt);
+        }
+      }
+      
+      // Read file content to auto-generate description (only for markdown files)
+      if (isMarkdown) {
+        try {
+          const content = await selectedFile.text();
+          
+          // Auto-generate description if empty
+          if (!missingLanguageDescription) {
+            // Remove frontmatter if present
+            const contentWithoutFrontmatter = content.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, '');
+            // Extract first paragraph or first 150 characters
+            const excerptMatch = contentWithoutFrontmatter.match(/^[^#\n]+/m);
+            let excerpt = excerptMatch ? excerptMatch[0].trim() : '';
+            if (excerpt.length > 150) {
+              excerpt = excerpt.substring(0, 150) + '...';
+            }
+            if (excerpt) {
+              setMissingLanguageDescription(excerpt);
+            }
+          }
+        } catch (err) {
+          console.error('Error reading file:', err);
+        }
+      } else if (isZip) {
+        if (!missingLanguageDescription) {
+          setMissingLanguageDescription('Blog post with images from ZIP archive');
+        }
+      }
+    }
+  };
+
+  const handleMissingLanguageImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setMissingLanguageImageFile(selectedFile);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Preview will be shown in the form
+      };
+      reader.readAsDataURL(selectedFile);
+    }
+  };
+
+  const handleUploadMissingLanguage = async () => {
+    if (!missingLanguageFile || !post) {
+      setError('Please select a file to upload');
+      return;
+    }
+
+    setUploadingMissingLanguage(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', missingLanguageFile);
+      if (missingLanguageTitle) {
+        formData.append('title', missingLanguageTitle);
+      }
+      if (missingLanguageDescription) {
+        formData.append('description', missingLanguageDescription);
+      }
+      if (missingLanguageImageMode === 'upload' && missingLanguageImageFile) {
+        formData.append('thumbnailFile', missingLanguageImageFile);
+      } else if (missingLanguageImageMode === 'url' && missingLanguageImage) {
+        formData.append('image', missingLanguageImage);
+      }
+      formData.append('language', missingLanguage);
+      // Explicitly pass blogId to ensure correct linking to existing blog
+      formData.append('blogId', post.blogId);
+
+      const response = await fetch('/api/blog/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok) {
+        // Success - hide the upload option and refresh language versions
+        setShowMissingLanguageUpload(false);
+        setMissingLanguageFile(null);
+        setMissingLanguageTitle('');
+        setMissingLanguageDescription('');
+        setMissingLanguageImage('');
+        setMissingLanguageImageFile(null);
+        
+        // Refresh language versions check
+        const versionResponse = await fetch(`/api/blog/language-versions?blogId=${post.blogId}`);
+        if (versionResponse.ok) {
+          const versionData = await versionResponse.json();
+          setHasVi(versionData.hasVi);
+          setHasEn(versionData.hasEn);
+        }
+        
+        // Show success message
+        toast.success(`${missingLanguage === 'vi' ? 'Vietnamese' : 'English'} version uploaded successfully!`);
+        
+        // Notify parent component to refresh blog list
+        if (onLanguageVersionAdded) {
+          onLanguageVersionAdded();
+        }
+      } else {
+        setError(responseData.error || 'Failed to upload missing language version');
+      }
+    } catch (err) {
+      setError('An error occurred while uploading');
+      console.error(err);
+    } finally {
+      setUploadingMissingLanguage(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleClose();
@@ -216,10 +393,15 @@ export function UpdateModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="absolute top-1.5 bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8"
+              className="absolute top-1.5 bg-background border border-text-secondary/20 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">Update Blog Post</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground">Update Blog Post</h2>
+                <span className="px-3 py-1 text-xs font-medium rounded-full bg-accent/20 text-accent">
+                  {currentLanguage === 'vi' ? 'Vietnamese' : 'English'}
+                </span>
+              </div>
               <p className="text-sm sm:text-base text-text-secondary mb-4 sm:mb-6">Edit the blog post details below</p>
               
               <form key={formKey} onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -398,6 +580,174 @@ export function UpdateModal({
                     Uploading a new ZIP file will replace the existing markdown file and all images. Old resources will be deleted.
                   </p>
                 </div>
+
+                {/* Missing Language Version Upload */}
+                {showMissingLanguageUpload && (
+                  <div className="border-t border-text-secondary/20 pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-1">
+                          Upload Missing {missingLanguage === 'vi' ? 'Vietnamese' : 'English'} Version
+                        </h3>
+                        <p className="text-sm text-text-secondary">
+                          This blog currently only exists in {currentLanguage === 'vi' ? 'Vietnamese' : 'English'}. 
+                          Upload the {missingLanguage === 'vi' ? 'Vietnamese' : 'English'} version to make it multilingual.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsMissingLanguageFormExpanded(!isMissingLanguageFormExpanded)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground hover:bg-text-secondary/10 rounded-md transition-colors"
+                        aria-label={isMissingLanguageFormExpanded ? 'Collapse form' : 'Expand form'}
+                        aria-expanded={isMissingLanguageFormExpanded}
+                      >
+                        <span className="hidden sm:inline">{isMissingLanguageFormExpanded ? 'Collapse' : 'Expand'}</span>
+                        {isMissingLanguageFormExpanded ? (
+                          <IoChevronUp size={20} className="text-accent" />
+                        ) : (
+                          <IoChevronDown size={20} className="text-accent" />
+                        )}
+                      </button>
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {isMissingLanguageFormExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-4 bg-background/50 p-4 rounded-lg border border-text-secondary/10">
+                      <div>
+                        <label htmlFor="missing-lang-file-input" className="block text-sm font-medium mb-2 text-foreground">
+                          ZIP Archive or Markdown File <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="missing-lang-file-input"
+                          type="file"
+                          accept=".md,.zip"
+                          onChange={handleMissingLanguageFileChange}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-accent/20 file:text-accent hover:file:bg-accent/30"
+                          disabled={uploadingMissingLanguage}
+                        />
+                        {missingLanguageFile && (
+                          <p className="mt-2 text-sm text-text-secondary">Selected: {missingLanguageFile.name}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="missing-lang-title-input" className="block text-sm font-medium mb-2 text-foreground">
+                          Title <span className="text-text-secondary text-xs">(optional - defaults to filename)</span>
+                        </label>
+                        <input
+                          id="missing-lang-title-input"
+                          type="text"
+                          value={missingLanguageTitle}
+                          onChange={(e) => setMissingLanguageTitle(e.target.value)}
+                          placeholder="Enter blog title..."
+                          className="w-full px-4 py-2 border border-text-secondary/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                          disabled={uploadingMissingLanguage}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="missing-lang-description-input" className="block text-sm font-medium mb-2 text-foreground">
+                          Description <span className="text-text-secondary text-xs">(optional)</span>
+                        </label>
+                        <textarea
+                          id="missing-lang-description-input"
+                          value={missingLanguageDescription}
+                          onChange={(e) => setMissingLanguageDescription(e.target.value)}
+                          placeholder="Enter blog description..."
+                          rows={3}
+                          className="w-full px-4 py-2 border border-text-secondary/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-y"
+                          disabled={uploadingMissingLanguage}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-foreground">
+                          Cover Image <span className="text-text-secondary text-xs">(optional)</span>
+                        </label>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="missing-lang-image-mode"
+                              value="url"
+                              checked={missingLanguageImageMode === 'url'}
+                              onChange={() => {
+                                setMissingLanguageImageMode('url');
+                                setMissingLanguageImageFile(null);
+                              }}
+                              disabled={uploadingMissingLanguage}
+                              className="cursor-pointer w-5 h-5"
+                            />
+                            <span className="text-sm text-foreground">Enter URL</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="missing-lang-image-mode"
+                              value="upload"
+                              checked={missingLanguageImageMode === 'upload'}
+                              onChange={() => {
+                                setMissingLanguageImageMode('upload');
+                                setMissingLanguageImage('');
+                              }}
+                              disabled={uploadingMissingLanguage}
+                              className="cursor-pointer w-5 h-5"
+                            />
+                            <span className="text-sm text-foreground">Upload File</span>
+                          </label>
+                        </div>
+
+                        {missingLanguageImageMode === 'url' && (
+                          <input
+                            type="text"
+                            value={missingLanguageImage}
+                            onChange={(e) => setMissingLanguageImage(e.target.value)}
+                            placeholder="/default_blog_img.png"
+                            className="w-full px-4 py-2 border border-text-secondary/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                            disabled={uploadingMissingLanguage}
+                          />
+                        )}
+
+                        {missingLanguageImageMode === 'upload' && (
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleMissingLanguageImageFileChange}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-accent/20 file:text-accent hover:file:bg-accent/30"
+                            disabled={uploadingMissingLanguage}
+                          />
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleUploadMissingLanguage}
+                        disabled={!missingLanguageFile || uploadingMissingLanguage}
+                        className="w-full px-4 py-2 bg-accent text-foreground rounded-md hover:bg-accent/80 transition-colors disabled:bg-text-secondary/20 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {uploadingMissingLanguage ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground"></div>
+                            <span>Uploading {missingLanguage === 'vi' ? 'Vietnamese' : 'English'} version...</span>
+                          </>
+                        ) : (
+                          `Upload ${missingLanguage === 'vi' ? 'Vietnamese' : 'English'} Version`
+                        )}
+                      </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
 
                 {(error || externalError) && (
                   <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 text-sm">

@@ -170,7 +170,7 @@ export function BlogCard({ post, onUpdate, onDelete, uploading = false }: BlogCa
         {/* Buttons */}
         <div className="mt-auto flex flex-col sm:flex-row gap-2 shrink-0 min-w-0">
           <Button 
-            href={`/blog/${post.slug}${onUpdate || onDelete ? '?from=admin' : ''}`}
+            href={`/blog/${post.slug}?language=${post.language || 'vi'}${onUpdate || onDelete ? '&from=admin' : ''}`}
             className="w-full sm:w-auto sm:min-w-0 justify-center"
           >
             <span className="text-accent shrink-0"><MdOutlineReadMore size={20} /></span>

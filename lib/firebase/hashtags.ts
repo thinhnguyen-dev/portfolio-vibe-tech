@@ -536,7 +536,28 @@ export async function updateBlogHashtags(
     // Remove duplicates while preserving order
     const newHashtagIds = Array.from(new Set(resolvedIds));
     
-    // 5. Create new hashtags (if any) with linkedBlogIds already set
+    // 5. Calculate added and removed hashtag IDs BEFORE any writes
+    // This allows us to read all necessary documents before writing
+    const addedHashtagIds = newHashtagIds.filter((id: string) => !oldHashtagIds.includes(id));
+    const removedHashtagIds = oldHashtagIds.filter((id: string) => !newHashtagIds.includes(id));
+    
+    // 6. Read all hashtag documents we need to update (both added and removed)
+    // MUST DO ALL READS BEFORE ANY WRITES (Firestore transaction requirement)
+    const hashtagDocsToUpdate = new Map<string, DocumentSnapshot>();
+    const allHashtagIdsToRead = [...new Set([...addedHashtagIds, ...removedHashtagIds])];
+    
+    for (const hashtagId of allHashtagIdsToRead) {
+      // Skip newly created hashtags (they already have blogId set, and we'll create them)
+      if (!finalHashtagsToCreate.some(ht => ht.id === hashtagId)) {
+        const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
+        const hashtagDoc = await transaction.get(hashtagRef);
+        if (hashtagDoc.exists()) {
+          hashtagDocsToUpdate.set(hashtagId, hashtagDoc);
+        }
+      }
+    }
+    
+    // 7. NOW we can do writes - Create new hashtags (if any) with linkedBlogIds already set
     for (const { name, id } of finalHashtagsToCreate) {
       const hashtagRef = doc(db, HASHTAGS_COLLECTION, id);
       const now = Timestamp.now();
@@ -551,32 +572,13 @@ export async function updateBlogHashtags(
       });
     }
     
-    // 6. Update blog document with new hashtagIds
+    // 8. Update blog document with new hashtagIds
     transaction.update(blogRef, {
       hashtagIds: newHashtagIds,
       modifiedAt: Timestamp.now(),
     });
     
-    // 7. Update existing hashtags' linkedBlogIds arrays
-    // Find added and removed hashtag IDs
-    const addedHashtagIds = newHashtagIds.filter((id: string) => !oldHashtagIds.includes(id));
-    const removedHashtagIds = oldHashtagIds.filter((id: string) => !newHashtagIds.includes(id));
-    
-    // Read all hashtag documents we need to update (both added and removed)
-    const hashtagDocsToUpdate = new Map<string, DocumentSnapshot>();
-    const allHashtagIdsToRead = [...new Set([...addedHashtagIds, ...removedHashtagIds])];
-    
-    for (const hashtagId of allHashtagIdsToRead) {
-      // Skip newly created hashtags (they already have blogId set)
-      if (!finalHashtagsToCreate.some(ht => ht.id === hashtagId)) {
-        const hashtagRef = doc(db, HASHTAGS_COLLECTION, hashtagId);
-        const hashtagDoc = await transaction.get(hashtagRef);
-        if (hashtagDoc.exists()) {
-          hashtagDocsToUpdate.set(hashtagId, hashtagDoc);
-        }
-      }
-    }
-    
+    // 9. Update existing hashtags' linkedBlogIds arrays
     // Add blog to added hashtags (skip newly created ones as they already have it)
     for (const hashtagId of addedHashtagIds) {
       // Skip if we just created this hashtag (it already has blogId)

@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 
 interface UploadFormProps {
-  onSubmit: (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File }) => Promise<void>;
+  onSubmit: (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File; language?: string }) => Promise<void>;
   uploading: boolean;
 }
 
 export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [language, setLanguage] = useState<'vi' | 'en'>('vi');
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -150,6 +151,7 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
       description: finalDescription,
       image: finalImage,
       thumbnailFile,
+      language,
     });
     
     // Reset form on success
@@ -160,6 +162,7 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
     setImageFile(null);
     setImagePreview('');
     setImageMode('url');
+    setLanguage('vi'); // Reset to default language
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     const imageFileInput = document.getElementById('image-file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -198,6 +201,41 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
             onSubmit={handleSubmit}
             className="space-y-4 sm:space-y-6 overflow-hidden"
           >
+        <div>
+          <label htmlFor="language-select" className="block text-sm font-medium mb-2 text-foreground">
+            Language <span className="text-text-secondary text-xs">(required)</span>
+          </label>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="language"
+                value="vi"
+                checked={language === 'vi'}
+                onChange={() => setLanguage('vi')}
+                disabled={uploading}
+                className="cursor-pointer w-5 h-5"
+              />
+              <span className="text-sm text-foreground">Vietnamese (vi)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="language"
+                value="en"
+                checked={language === 'en'}
+                onChange={() => setLanguage('en')}
+                disabled={uploading}
+                className="cursor-pointer w-5 h-5"
+              />
+              <span className="text-sm text-foreground">English (en)</span>
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-text-secondary">
+            Select the language for this blog post. If uploading an English version of an existing Vietnamese blog, select "English" and the system will link them automatically.
+          </p>
+        </div>
+
         <div>
           <label htmlFor="file-input" className="block text-sm font-medium mb-2 text-foreground">
             Select ZIP Archive (.zip) containing the Markdown File (.md) and related images 

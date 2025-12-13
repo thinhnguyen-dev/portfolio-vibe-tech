@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageLimit = parseInt(searchParams.get('limit') || '9', 10);
     
+    // Check for language filter (required, default to 'vi')
+    const languageParam = searchParams.get('language');
+    const language = languageParam === 'en' ? 'en' : 'vi'; // Default to 'vi' if not specified
+    
     // Check if filtering for blogs with no hashtags
     const noHashtagsParam = searchParams.get('noHashtags');
     const filterNoHashtags = noHashtagsParam === 'true';
@@ -30,16 +34,16 @@ export async function GET(request: NextRequest) {
     
     // If filtering for blogs with no hashtags
     if (filterNoHashtags) {
-      allPosts = await getBlogPostsWithNoHashtags();
-      total = await getBlogPostsCountWithNoHashtags();
+      allPosts = await getBlogPostsWithNoHashtags(language);
+      total = await getBlogPostsCountWithNoHashtags(language);
     } else if (hashtagIds.length > 0) {
       // If hashtag filtering is requested, use filtered query
-      allPosts = await getBlogPostsByHashtags(hashtagIds);
-      total = await getBlogPostsCountByHashtags(hashtagIds);
+      allPosts = await getBlogPostsByHashtags(hashtagIds, language);
+      total = await getBlogPostsCountByHashtags(hashtagIds, language);
     } else {
-      // Otherwise, get all posts
-      allPosts = await getAllBlogPostsMetadata();
-      total = await getBlogPostsCount();
+      // Otherwise, get all posts (with optional language filter)
+      allPosts = await getAllBlogPostsMetadata(language);
+      total = await getBlogPostsCount(language);
     }
     
     // Calculate pagination
@@ -55,9 +59,12 @@ export async function GET(request: NextRequest) {
       // Use publishDate if available, otherwise fall back to createdAt
       date: (post.publishDate || post.createdAt).toISOString().split('T')[0],
       image: post.thumbnail,
-      blogId: post.blogId, // Include UUID for unique key
+      blogId: post.blogId, // Shared blogId for linking multilingual versions
+      versionId: post.versionId || post.uuid, // Version ID (document ID in blogVersions)
+      uuid: post.versionId || post.uuid || post.blogId, // For backward compatibility
       category: post.category, // Default to 'Uncategorized' if no category
       hashtagIds: post.hashtagIds || [], // Include hashtag IDs for fetching hashtag names
+      language: post.language || 'vi', // Include language
     }));
     
     return NextResponse.json({

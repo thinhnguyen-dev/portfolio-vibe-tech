@@ -10,9 +10,11 @@ export interface BlogPostMetadata {
   date?: string;
   tags?: string[];
   image?: string;
-  blogId?: string; // Optional UUID for unique identification
+  blogId?: string; // Optional UUID for unique identification (shared across language versions)
+  uuid?: string; // Optional unique UUID (document ID, unique per language version)
   category?: string; // Optional category for grouping blog posts
   hashtagIds?: string[]; // Array of hashtag IDs for fetching hashtag names
+  language?: string; // Language code: 'vi' or 'en'
 }
 
 export function getAllBlogSlugs(): string[] {

@@ -8,6 +8,8 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const searchParams = request.nextUrl.searchParams;
+    const language = searchParams.get('language') || 'vi'; // Default to 'vi' if not specified
     
     if (!slug || typeof slug !== 'string') {
       return NextResponse.json(
@@ -16,18 +18,26 @@ export async function GET(
       );
     }
     
-    // First, check if blog exists in Firestore by slug
-    const blogMetadata = await getBlogPostMetadataBySlug(slug);
-    if (!blogMetadata) {
-      // Blog doesn't exist in Firestore - return 404
+    // Validate language parameter
+    if (language !== 'vi' && language !== 'en') {
       return NextResponse.json(
-        { error: 'Blog post not found' },
+        { error: 'Invalid language parameter. Must be "vi" or "en"' },
+        { status: 400 }
+      );
+    }
+    
+    // First, check if blog exists in Firestore by slug and language
+    const blogMetadata = await getBlogPostMetadataBySlug(slug, language);
+    if (!blogMetadata) {
+      // Blog doesn't exist in Firestore for this language - return 404
+      return NextResponse.json(
+        { error: 'Blog post not found for the specified language' },
         { status: 404 }
       );
     }
     
-    // Get UUID from metadata
-    const uuid = blogMetadata.blogId;
+    // Get versionId from metadata (this is the document ID in blogVersions, unique per language version)
+    const versionId = blogMetadata.versionId || blogMetadata.uuid || blogMetadata.blogId;
     
     // Check cache first (using slug as cache key for backward compatibility)
     if (isCacheValid(slug)) {
@@ -40,9 +50,9 @@ export async function GET(
       }
     }
     
-    // Fetch from Firebase Storage using UUID
+    // Fetch from Firebase Storage using versionId
     try {
-      const content = await downloadMarkdownFromStorage(uuid);
+      const content = await downloadMarkdownFromStorage(versionId);
       
       // Save to cache (using slug as cache key)
       saveToCache(slug, content);

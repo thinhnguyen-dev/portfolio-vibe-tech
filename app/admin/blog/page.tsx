@@ -73,12 +73,28 @@ function AdminBlogPageContent() {
   
   const [selectedHashtagIds, setSelectedHashtagIds] = useState<string[]>(getInitialHashtagIds);
   const [filterNoHashtags, setFilterNoHashtags] = useState(getInitialNoHashtags);
+  
+  const getInitialLanguage = () => {
+    if (!searchParams) {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const lang = urlParams.get('language');
+        return lang === 'en' ? 'en' : 'vi'; // Default to 'vi'
+      }
+      return 'vi';
+    }
+    const lang = searchParams.get('language');
+    return lang === 'en' ? 'en' : 'vi'; // Default to 'vi'
+  };
+  
+  const [selectedLanguage, setSelectedLanguage] = useState<'vi' | 'en'>(getInitialLanguage);
   const [pendingUploadData, setPendingUploadData] = useState<{
     file: File;
     title?: string;
     description?: string;
     image?: string;
     thumbnailFile?: File;
+    language?: string;
   } | null>(null);
   const prevHashtagIdsRef = useRef<string[]>(getInitialHashtagIds());
   const hasInitializedRef = useRef(false);
@@ -89,6 +105,9 @@ function AdminBlogPageContent() {
       setLoading(true);
       // Build query parameters
       const params = new URLSearchParams();
+      
+      // Add language filter (always required)
+      params.append('language', selectedLanguage);
       
       // Add no-hashtags filter if enabled
       if (filterNoHashtags) {
@@ -113,12 +132,14 @@ function AdminBlogPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedHashtagIds, filterNoHashtags]);
+  }, [selectedHashtagIds, filterNoHashtags, selectedLanguage]);
 
-  // Sync hashtag filter from URL and trigger fetch in correct order
+  // Sync hashtag and language filters from URL and trigger fetch in correct order
   useEffect(() => {
     const hashtagsParam = searchParams?.get('hashtags');
     const noHashtagsParam = searchParams?.get('noHashtags') === 'true';
+    const languageParam = searchParams?.get('language');
+    const urlLanguage = languageParam === 'en' ? 'en' : 'vi'; // Default to 'vi'
     
     const urlHashtagIds = hashtagsParam
       ? hashtagsParam.split(',').map(id => id.trim()).filter(id => id.length > 0 && id !== '__no_hashtags__')
@@ -128,11 +149,12 @@ function AdminBlogPageContent() {
     const currentIdsString = JSON.stringify([...selectedHashtagIds].sort());
     const urlIdsString = JSON.stringify([...urlHashtagIds].sort());
     
-    const needsUpdate = currentIdsString !== urlIdsString || filterNoHashtags !== noHashtagsParam;
+    const needsUpdate = currentIdsString !== urlIdsString || filterNoHashtags !== noHashtagsParam || selectedLanguage !== urlLanguage;
     
     if (needsUpdate) {
       setSelectedHashtagIds(urlHashtagIds);
       setFilterNoHashtags(noHashtagsParam);
+      setSelectedLanguage(urlLanguage);
       prevHashtagIdsRef.current = urlHashtagIds;
     }
     
@@ -142,6 +164,7 @@ function AdminBlogPageContent() {
       // Use the URL params directly for the first fetch to avoid double call
       // This ensures we fetch with correct filter from the start
       const fetchParams = new URLSearchParams();
+      fetchParams.append('language', urlLanguage); // Language is always required
       if (noHashtagsParam) {
         fetchParams.append('noHashtags', 'true');
       } else if (urlHashtagIds.length > 0) {
@@ -170,6 +193,7 @@ function AdminBlogPageContent() {
       // For subsequent updates (navigation), fetch directly with URL params
       // to avoid using stale state values
       const fetchParams = new URLSearchParams();
+      fetchParams.append('language', urlLanguage); // Language is always required
       if (noHashtagsParam) {
         fetchParams.append('noHashtags', 'true');
       } else if (urlHashtagIds.length > 0) {
@@ -227,7 +251,7 @@ function AdminBlogPageContent() {
     }
   };
 
-  const performUpload = async (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File }) => {
+  const performUpload = async (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File; language?: string }) => {
     setUploading(true);
     setError(null);
 
@@ -245,6 +269,9 @@ function AdminBlogPageContent() {
       }
       if (data.thumbnailFile) {
         formData.append('thumbnailFile', data.thumbnailFile);
+      }
+      if (data.language) {
+        formData.append('language', data.language);
       }
 
       // Use XMLHttpRequest for progress tracking
@@ -278,7 +305,7 @@ function AdminBlogPageContent() {
     }
   };
 
-  const handleUpload = async (data: { file: File; title?: string; description?: string; image?: string }) => {
+  const handleUpload = async (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File; language?: string }) => {
     // Store the upload data and show password modal
     setPendingUploadData(data);
     setShowPasswordModal(true);
@@ -309,14 +336,17 @@ function AdminBlogPageContent() {
         setShowUpdatePasswordModal(false);
         
         // Fetch full Firebase metadata for the post via API
+        // Include language parameter to ensure we get the correct version
         try {
-          const metadataResponse = await fetch(`/api/blog/metadata/${pendingUpdateSlug}`);
+          const languageParam = selectedLanguage === 'en' ? 'en' : 'vi';
+          const metadataResponse = await fetch(`/api/blog/metadata/${pendingUpdateSlug}?language=${languageParam}`);
           if (metadataResponse.ok) {
             const metadataData = await metadataResponse.json();
             // Convert ISO strings back to Date objects to match FirebaseBlogPostMetadata type
             const fullPost: FirebaseBlogPostMetadata = {
               blogId: metadataData.blogId,
-              uuid: metadataData.uuid,
+              versionId: metadataData.versionId || metadataData.uuid || metadataData.blogId, // Version ID (document ID in blogVersions)
+              uuid: metadataData.uuid || metadataData.versionId || metadataData.blogId, // Use uuid (document ID) - fallback to blogId for backward compatibility
               title: metadataData.title,
               description: metadataData.description,
               thumbnail: metadataData.thumbnail,
@@ -326,6 +356,7 @@ function AdminBlogPageContent() {
               publishDate: metadataData.publishDate ? new Date(metadataData.publishDate) : undefined,
               category: metadataData.category,
               hashtagIds: metadataData.hashtagIds || [],
+              language: metadataData.language || 'vi', // Include language field
             };
             setPendingUpdatePost(fullPost);
             setShowUpdateModal(true);
@@ -370,6 +401,8 @@ function AdminBlogPageContent() {
       formData.append('title', data.title);
       formData.append('description', data.description);
       formData.append('password', verifiedPassword);
+      // Include language to ensure we update the correct version
+      formData.append('language', pendingUpdatePost.language || 'vi');
       
       if (data.image) {
         formData.append('image', data.image);
@@ -484,6 +517,54 @@ function AdminBlogPageContent() {
     router.push('/admin/hashtags');
   };
 
+  const handleLanguageChange = (language: 'vi' | 'en') => {
+    // Mark that we're updating from handler to prevent double fetch
+    isUpdatingFromHandlerRef.current = true;
+    
+    // Update state first
+    setSelectedLanguage(language);
+    
+    // Update URL to reflect the filter state
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('language', language); // Language is always required
+    
+    // Update URL without page reload
+    const newUrl = params.toString() ? `/admin/blog?${params.toString()}` : '/admin/blog';
+    router.replace(newUrl, { scroll: false });
+    
+    // Trigger fetch with new values immediately
+    const fetchParams = new URLSearchParams();
+    fetchParams.append('language', language); // Language is always required
+    if (filterNoHashtags) {
+      fetchParams.append('noHashtags', 'true');
+    } else if (selectedHashtagIds.length > 0) {
+      fetchParams.append('hashtags', selectedHashtagIds.join(','));
+    }
+    
+    setLoading(true);
+    fetch(`/api/blog/posts?${fetchParams.toString()}`)
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Failed to load blog posts');
+      })
+      .then(data => {
+        const postsData = data.posts || data;
+        setPosts(Array.isArray(postsData) ? postsData : []);
+      })
+      .catch(() => {
+        toast.error('Failed to load blog posts');
+      })
+      .finally(() => {
+        setLoading(false);
+        // Reset flag after fetch completes
+        setTimeout(() => {
+          isUpdatingFromHandlerRef.current = false;
+        }, 100);
+      });
+  };
+
   const handleHashtagFilterChange = (hashtagIds: string[]) => {
     // Mark that we're updating from handler to prevent double fetch
     isUpdatingFromHandlerRef.current = true;
@@ -507,6 +588,7 @@ function AdminBlogPageContent() {
     
     // Trigger fetch with new values immediately
     const fetchParams = new URLSearchParams();
+    fetchParams.append('language', selectedLanguage); // Language is always required
     if (hashtagIds.length > 0) {
       fetchParams.append('hashtags', hashtagIds.join(','));
     }
@@ -559,6 +641,7 @@ function AdminBlogPageContent() {
     
     // Trigger fetch with new values immediately
     const fetchParams = new URLSearchParams();
+    fetchParams.append('language', selectedLanguage); // Language is always required
     if (newFilterNoHashtags) {
       fetchParams.append('noHashtags', 'true');
     }
@@ -640,6 +723,8 @@ function AdminBlogPageContent() {
           filterNoHashtags={filterNoHashtags}
           onHashtagFilterChange={handleHashtagFilterChange}
           onNoHashtagsFilterToggle={handleNoHashtagsFilterToggle}
+          selectedLanguage={selectedLanguage}
+          onLanguageChange={handleLanguageChange}
           disabled={uploading || deleting}
         />
         
@@ -724,6 +809,10 @@ function AdminBlogPageContent() {
         post={pendingUpdatePost}
         updating={uploading}
         error={error}
+        onLanguageVersionAdded={() => {
+          // Refresh blog list when missing language version is uploaded
+          fetchPosts();
+        }}
       />
 
       {/* Toast Container */}
