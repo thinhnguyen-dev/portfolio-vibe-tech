@@ -29,12 +29,39 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const password = formData.get('password') as string | null;
     const title = formData.get('title') as string | null;
     const description = formData.get('description') as string | null;
     const image = formData.get('image') as string | null;
     const thumbnailFile = formData.get('thumbnailFile') as File | null;
     const language = (formData.get('language') as string | null) || 'vi'; // Default to 'vi' for backward compatibility
     const providedBlogId = formData.get('blogId') as string | null; // Optional blogId for linking to existing blog
+
+    // Verify password
+    if (!password) {
+      return NextResponse.json(
+        { error: 'Password is required' },
+        { status: 400 }
+      );
+    }
+
+    const secretPassword = process.env.SECRET_UPLOAD_PASSWORD;
+    if (!secretPassword) {
+      console.error('SECRET_UPLOAD_PASSWORD environment variable is not set');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    // Use constant-time comparison to prevent timing attacks
+    const isValid = password === secretPassword;
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Invalid password' },
+        { status: 401 }
+      );
+    }
 
     if (!file) {
       return NextResponse.json(

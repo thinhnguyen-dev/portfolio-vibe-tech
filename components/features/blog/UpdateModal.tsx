@@ -22,6 +22,7 @@ interface UpdateModalProps {
   post: BlogPostMetadata | null;
   updating: boolean;
   error: string | null;
+  password?: string | null; // Password for uploading missing language versions
   onLanguageVersionAdded?: () => void; // Callback when missing language version is uploaded
 }
 
@@ -46,6 +47,7 @@ export function UpdateModal({
   post,
   updating,
   error: externalError,
+  password,
   onLanguageVersionAdded,
 }: UpdateModalProps) {
   // Initialize state with values from post prop
@@ -302,9 +304,16 @@ export function UpdateModal({
     setUploadingMissingLanguage(true);
     setError(null);
 
+    if (!password) {
+      setError('Password is required to upload missing language version');
+      setUploadingMissingLanguage(false);
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('file', missingLanguageFile);
+      formData.append('password', password);
       if (missingLanguageTitle) {
         formData.append('title', missingLanguageTitle);
       }

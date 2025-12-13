@@ -235,12 +235,13 @@ function AdminBlogPageContent() {
       const data = await response.json();
       const isValid = response.ok && data.success === true;
       
-      // If password is valid, proceed with upload
+      // If password is valid, store it and proceed with upload
       if (isValid && pendingUploadData) {
+        setVerifiedPassword(password);
         setShowPasswordModal(false);
         // Perform upload after a short delay to allow modal to close
         setTimeout(async () => {
-          await performUpload(pendingUploadData);
+          await performUpload(pendingUploadData, password);
           setPendingUploadData(null);
         }, 100);
       }
@@ -251,13 +252,14 @@ function AdminBlogPageContent() {
     }
   };
 
-  const performUpload = async (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File; language?: string }) => {
+  const performUpload = async (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File; language?: string }, password: string) => {
     setUploading(true);
     setError(null);
 
     try {
       const formData = new FormData();
       formData.append('file', data.file);
+      formData.append('password', password);
       if (data.title) {
         formData.append('title', data.title);
       }
@@ -809,6 +811,7 @@ function AdminBlogPageContent() {
         post={pendingUpdatePost}
         updating={uploading}
         error={error}
+        password={verifiedPassword}
         onLanguageVersionAdded={() => {
           // Refresh blog list when missing language version is uploaded
           fetchPosts();
