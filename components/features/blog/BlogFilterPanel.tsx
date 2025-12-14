@@ -1,6 +1,7 @@
 'use client';
 
 import { HashtagFilter } from './HashtagFilter';
+import { LanguageSelector } from './LanguageSelector';
 
 interface BlogFilterPanelProps {
   selectedHashtagIds: string[];
@@ -26,34 +27,13 @@ export function BlogFilterPanel({
   return (
     <div className={`mb-6 p-4 bg-background border border-text-secondary/20 rounded-lg space-y-4 ${className}`}>
       {/* Language Filter - Required, no "All" option */}
-      <div className="flex flex-col gap-2 pb-2 border-b border-text-secondary/20">
-        <label className="text-sm font-medium text-foreground">Language <span className="text-text-secondary text-xs">(required)</span></label>
-        <div className="flex flex-wrap gap-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="language-filter"
-              value="vi"
-              checked={selectedLanguage === 'vi'}
-              onChange={() => onLanguageChange('vi')}
-              disabled={disabled}
-              className="w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <span className="text-sm text-foreground">Vietnamese (vi)</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="language-filter"
-              value="en"
-              checked={selectedLanguage === 'en'}
-              onChange={() => onLanguageChange('en')}
-              disabled={disabled}
-              className="w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <span className="text-sm text-foreground">English (en)</span>
-          </label>
-        </div>
+      <div className="pb-2 border-b border-text-secondary/20">
+        <LanguageSelector
+          value={selectedLanguage}
+          onChange={onLanguageChange}
+          disabled={disabled}
+          id="language-filter-select"
+        />
       </div>
 
       <HashtagFilter

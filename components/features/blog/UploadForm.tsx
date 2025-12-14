@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
+import { LanguageSelector } from './LanguageSelector';
 
 interface UploadFormProps {
   onSubmit: (data: { file: File; title?: string; description?: string; image?: string; thumbnailFile?: File; language?: string }) => Promise<void>;
@@ -172,7 +173,7 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
   return (
     <div className="p-4 sm:p-6 border border-text-secondary/20 rounded-lg bg-background/50">
       {/* Header with Collapse/Expand Button */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="px-4 flex items-center justify-between mb-4">
         <h2 className="text-xl sm:text-2xl font-bold text-foreground">Upload New Blog Post</h2>
         <button
           type="button"
@@ -199,42 +200,15 @@ export function UploadForm({ onSubmit, uploading }: UploadFormProps) {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             onSubmit={handleSubmit}
-            className="space-y-4 sm:space-y-6 overflow-hidden"
+            className="px-4 space-y-4 sm:space-y-6 overflow-hidden"
           >
-        <div>
-          <label htmlFor="language-select" className="block text-sm font-medium mb-2 text-foreground">
-            Language <span className="text-text-secondary text-xs">(required)</span>
-          </label>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="language"
-                value="vi"
-                checked={language === 'vi'}
-                onChange={() => setLanguage('vi')}
-                disabled={uploading}
-                className="cursor-pointer w-5 h-5"
-              />
-              <span className="text-sm text-foreground">Vietnamese (vi)</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="language"
-                value="en"
-                checked={language === 'en'}
-                onChange={() => setLanguage('en')}
-                disabled={uploading}
-                className="cursor-pointer w-5 h-5"
-              />
-              <span className="text-sm text-foreground">English (en)</span>
-            </label>
-          </div>
-          <p className="mt-1 text-xs text-text-secondary">
-            Select the language for this blog post. If uploading an English version of an existing Vietnamese blog, select "English" and the system will link them automatically.
-          </p>
-        </div>
+        <LanguageSelector
+          value={language}
+          onChange={setLanguage}
+          disabled={uploading}
+          id="language-select"
+          helpText="Select the language for this blog post. If uploading an English version of an existing Vietnamese blog, select &quot;English&quot; and the system will link them automatically."
+        />
 
         <div>
           <label htmlFor="file-input" className="block text-sm font-medium mb-2 text-foreground">
